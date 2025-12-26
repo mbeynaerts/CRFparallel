@@ -542,7 +542,7 @@ Score2 <- function(coef.vector, X1, X2, datalist, Sl = NULL) {
 #   return(-(L1+L2))
 # }
 
-SimData <- function (K, cens.par = 0, alpha = c(3,5,1.5), weights = c(0.2,0.4,0.4), margin = "exp", ...) {
+SimData <- function (K, cens.par = 0, alpha = c(3,5,1.5), weights = c(0.2,0.4,0.4), margin = "exp", ncores = 1, ...) {
 
   # u1 <- runif(K, 0, 1)
   # u2 <- runif(K, 0, 1)
@@ -553,6 +553,8 @@ SimData <- function (K, cens.par = 0, alpha = c(3,5,1.5), weights = c(0.2,0.4,0.
   # T1 <- -log(u1)
   # T2 <- -log(log(a/(a+(1-alpha)*u2),base = alpha))
 
+  RcppParallel::setThreadOptions(numThreads = ncores)
+  
   mx <- copula::mixCopula(list(copula::claytonCopula(alpha[1], dim = 2),
                                copula::frankCopula(alpha[2], dim = 2),
                                copula::gumbelCopula(alpha[3], dim = 2)),
@@ -694,7 +696,9 @@ SimData <- function (K, cens.par = 0, alpha = c(3,5,1.5), weights = c(0.2,0.4,0.
   delta.prod = DeltaC(delta[,1], delta[,2])
   delta.prod1 <- c(t(delta.prod))
   delta.prod2 <- c(delta.prod)
-
+  
+  RcppParallel::setThreadOptions(numThreads = 1)
+  
   return(list(X = X,
               idx = delta,
               # knots = cbind(knots1,knots2),
