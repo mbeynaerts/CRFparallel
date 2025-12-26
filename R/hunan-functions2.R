@@ -649,7 +649,7 @@ SimData <- function (K, cens.par = 0, alpha = c(3,5,1.5), weights = c(0.2,0.4,0.
   # N1 <- c(t(N))
   # N2 <- c(N)
 
-  N <- risksetC(X[,1],X[,2])
+  N <- riskset_fast(X[,1],X[,2]); mode(N) <- "integer"
   N1 <- c(t(N))
   N2 <- c(N)
 
@@ -909,7 +909,10 @@ EstimatePenal2 <- function(datalist, dim, degree = 3, lambda.init = c(1,1), star
                            type = "ps", quantile = FALSE, scale = FALSE, repara = FALSE, step.control = FALSE,
                            control = efs.control(),
                            nl.control = nleqslv.control(),
-                           verbose = TRUE) {
+                           verbose = TRUE,
+                           ncores = 1) {
+  
+  RcppParallel::setThreadOptions(numThreads = ncores)
 
   if (verbose) print("Extended Fellner-Schall method:")
 
@@ -1009,7 +1012,7 @@ EstimatePenal2 <- function(datalist, dim, degree = 3, lambda.init = c(1,1), star
         while (lk < l0 && k > 1) { # Don't contract too much since the likelihood does not need to increase k > 0.001
           k <- k/2 ## Contract step
           lambda3 <- pmin(lambda*update^k, control$lambda.max)
-          fit <- efsud.fit2(start = fit$beta, X1 = obj$X1, X2 = obj$X2, datalist = datalist,
+          fit <- efsud.fit2(start = fit$beta, X1 = obj1$X, X2 = obj2$X, datalist = datalist,
                            # Sl = lambda3*S
                            Sl = lambda3[1]*S1 + lambda3[2]*S2,
                            # weights = weights,
@@ -1066,6 +1069,8 @@ EstimatePenal2 <- function(datalist, dim, degree = 3, lambda.init = c(1,1), star
   if (verbose) {
     if (iter < control$maxiter) print("Converged") else print("Maximum number of iterations reached")
   }
+  
+  RcppParallel::setThreadOptions(numThreads = 1)
 
 
   return(list(

@@ -7,7 +7,7 @@ using namespace RcppParallel;
 // [[Rcpp::depends(RcppArmadillo)]]
 // [[Rcpp::depends(RcppParallel)]]
 
-
+// Thanks chatGPT!!
 struct Fenwick {
   std::vector<int> tree;
   Fenwick(std::size_t n) : tree(n+1, 0) {}
@@ -61,41 +61,42 @@ struct riskset_worker : public RcppParallel::Worker {
 };
 
 
-struct riskset : public Worker {
-  
-  // Input
-  RVector<double> x;
-  RVector<double> y;
-  std::size_t n;
-  
-  // Output
-  RMatrix<int> N;
-  
-  // Helper function
-  int Ind2(const double &a, const double &b) {
-    int sum = 0;
-    for (std::size_t i=0; i<n; i++) {
-      if (x[i] >= a and y[i] >= b) {
-        sum++;
-      }
-    }
-    return sum;
-  }
-  
-  // Worker
-  riskset(const NumericVector x, const NumericVector y, IntegerMatrix N)
-    : x(x), y(y), n(x.size()), N(N) {}
-  
-  // Parallel loop
-  void operator() (std::size_t begin, std::size_t end) {
-    for (std::size_t j=begin; j<end; j++) {
-      for (std::size_t i=0; i<n; i++) {
-        N(j,i) = Ind2(x[j], y[i]);
-      }
-    }
-  }
-  
-};
+// Slow parallel implementation
+// struct riskset : public Worker {
+//   
+//   // Input
+//   RVector<double> x;
+//   RVector<double> y;
+//   std::size_t n;
+//   
+//   // Output
+//   RMatrix<int> N;
+//   
+//   // Helper function
+//   int Ind2(const double &a, const double &b) {
+//     int sum = 0;
+//     for (std::size_t i=0; i<n; i++) {
+//       if (x[i] >= a and y[i] >= b) {
+//         sum++;
+//       }
+//     }
+//     return sum;
+//   }
+//   
+//   // Worker
+//   riskset(const NumericVector x, const NumericVector y, IntegerMatrix N)
+//     : x(x), y(y), n(x.size()), N(N) {}
+//   
+//   // Parallel loop
+//   void operator() (std::size_t begin, std::size_t end) {
+//     for (std::size_t j=begin; j<end; j++) {
+//       for (std::size_t i=0; i<n; i++) {
+//         N(j,i) = Ind2(x[j], y[i]);
+//       }
+//     }
+//   }
+//   
+// };
 
 // [[Rcpp::export]]
 arma::mat row_kron(const arma::mat& X, const arma::mat& Y) {
@@ -163,34 +164,20 @@ IntegerMatrix IndEqual(NumericVector &x) {
   return elem;
 }
 
-// [[Rcpp::export]]
-int Ind2(NumericVector &x, NumericVector &y, double &a, double &b) {
-  int n = x.size();
-  int sum = 0;
-  for (int i=0; i<n; i++) {
-    if (x[i] >= a and y[i] >= b) {
-      sum += 1;
-    } else {
-      sum += 0;
-    }
-  }
-  return sum;
-}
-
-// [[Rcpp::export]]
-IntegerMatrix risksetC(NumericVector x, NumericVector y) {
-  
-  std::size_t n = x.size();
-  IntegerMatrix risksetmat(n);
-  
-  // Worker
-  riskset riskset(x,y,risksetmat);
-  
-  // Parallel loop
-  parallelFor(0, n, riskset);
-  
-  return risksetmat;
-}
+// // [[Rcpp::export]]
+// IntegerMatrix risksetC(NumericVector x, NumericVector y) {
+//   
+//   std::size_t n = x.size();
+//   IntegerMatrix risksetmat(n);
+//   
+//   // Worker
+//   riskset riskset(x,y,risksetmat);
+//   
+//   // Parallel loop
+//   parallelFor(0, n, riskset);
+//   
+//   return risksetmat;
+// }
 
 // [[Rcpp::export]]
 IntegerMatrix riskset_fast(NumericVector x, NumericVector y) {
@@ -259,58 +246,6 @@ double logLikC(const NumericVector &riskset1,
 }
 
 // [[Rcpp::export]]
-NumericVector gradientC(const NumericVector &riskset1,
-                        const NumericVector &riskset2,
-                        const NumericVector &logtheta1,
-                        const NumericVector &logtheta2,
-                        const Rcpp::List &deriv,
-                        const int &df,
-                        const NumericVector &delta1,
-                        const NumericVector &delta2,
-                        const NumericVector &I1,
-                        const NumericVector &I2,
-                        const NumericVector &I3,
-                        const NumericVector &I4,
-                        const NumericVector &I5,
-                        const NumericVector &I6) {
-
-  int n = riskset1.length();
-  int totalparam = df*df;
-  NumericVector result(totalparam);
-  NumericVector common1(n);
-  NumericVector common2(n);
-
-  /* Transform list of derivative matrices into vector of matrices */
-  std::vector<NumericMatrix> deriv_vec(totalparam);
-  for (int k = 0; k < totalparam; ++k) {
-    NumericMatrix deriv_R = deriv[k];
-    deriv_vec[k] = deriv_R;
-  }
-
-
-  common1 = delta1*I1*(I5 - I2*Rcpp::exp(logtheta1)/(riskset1 + I2*Rcpp::exp(logtheta1) - I2));
-  common2 = delta2*I3*(I6 - I4*Rcpp::exp(logtheta2)/(riskset2 + I4*Rcpp::exp(logtheta2) - I4));
-
-  for (int m=0; m<totalparam; m++) {
-
-    double sum1 = 0.0;
-    double sum2 = 0.0;
-
-    /* Calculation of L1 */
-    for (int j=0; j<n; j++) {
-      sum1 += common1(j)*deriv_vec[m](j,0);
-      sum2 += common2(j)*deriv_vec[m](j,1);
-    }
-
-    result(m) = -sum1-sum2;
-
-  }
-
-return(result);
-
-}
-
-// [[Rcpp::export]]
 NumericVector gradientNew(const arma::colvec &riskset1,
                           const arma::colvec &riskset2,
                           const arma::colvec &logtheta1,
@@ -339,7 +274,8 @@ NumericVector gradientNew(const arma::colvec &riskset1,
   common1 = delta1 % I1 % (I5 - I2 % arma::exp(logtheta1)/(riskset1 + I2 % arma::exp(logtheta1) - I2));
   common2 = delta2 % I3 % (I6 - I4 % arma::exp(logtheta2)/(riskset2 + I4 % arma::exp(logtheta2) - I4));
 
-  arma::mat deriv_mat(K,K), deriv_mat_t(K,K);
+  arma::mat deriv_mat(K,K);
+  arma::mat deriv_mat_t(K,K);
   arma::colvec deriv1(deriv_mat_t.memptr(), deriv_mat_t.n_elem, false, true);
   arma::colvec deriv2(deriv_mat.memptr(), deriv_mat.n_elem, false, true);
 
@@ -412,61 +348,6 @@ NumericVector gradientPoly(const NumericVector &riskset1,
   }
 
   return(result);
-
-}
-
-
-// [[Rcpp::export]]
-NumericMatrix hessianC(const NumericVector &riskset1,
-                       const NumericVector &riskset2,
-                       const NumericVector &logtheta1,
-                       const NumericVector &logtheta2,
-                       const Rcpp::List &deriv,
-                       const NumericVector &delta1,
-                       const NumericVector &delta2,
-                       const int df,
-                       const NumericVector &I1,
-                       const NumericVector &I2,
-                       const NumericVector &I3,
-                       const NumericVector &I4) {
-
-  int n = riskset1.length();
-  int totalparam = df*df;
-  NumericVector common1(n);
-  NumericVector common2(n);
-
-  NumericMatrix result(totalparam);
-
-  /* Transform list of derivative matrices into vector of matrices */
-  std::vector<NumericMatrix> deriv_vec(totalparam);
-  for(int k = 0; k < totalparam; ++k) {
-    NumericMatrix deriv_R = deriv[k];
-    /* arma::mat derivMat(deriv_R.begin(), deriv_R.rows(), deriv_R.cols(), false, true);
-    deriv_vec[k] = derivMat; */
-    deriv_vec[k] = deriv_R;
-  }
-
-    common1 = -delta1*I1*(riskset1 - I2)*I2*Rcpp::exp(logtheta1)/Rcpp::pow(riskset1 - I2 + I2*Rcpp::exp(logtheta1),2);
-    common2 = -delta2*I3*(riskset2 - I4)*I4*Rcpp::exp(logtheta2)/Rcpp::pow(riskset2 - I4 + I4*Rcpp::exp(logtheta2),2);
-
-  for (int m = 0; m < totalparam; m++) {
-    for (int l = m; l < totalparam; l++) {
-
-      double sum1 = 0.0;
-      double sum2 = 0.0;
-
-      for (int j=0; j<n; j++) {
-        sum1 += common1(j)*deriv_vec[m](j,0)*deriv_vec[l](j,0);
-        sum2 += common2(j)*deriv_vec[m](j,1)*deriv_vec[l](j,1);
-      }
-
-      result(m,l) = -sum1-sum2;
-      result(l,m) = result(m,l);
-
-    }
-  }
-
-return(result);
 
 }
 
