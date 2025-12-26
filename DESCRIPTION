@@ -1,0 +1,27 @@
+Package: CRFparallel
+Type: Package
+Title: What the Package Does (Title Case)
+Version: 0.1.0
+Author: Miguel Beynaerts
+Maintainer: The package maintainer <yourself@somewhere.net>
+Description: More about what it does (maybe more than one line)
+    Use four spaces when indenting paragraphs within the Description.
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+Imports: 
+  Rcpp (>= 1.0.13-1),
+  RcppArmadillo,
+  RcppParallel,
+  stats,
+  MASS,
+  mgcv,
+  nleqslv,
+  copula
+LinkingTo:
+  Rcpp,
+  RcppArmadillo,
+  RcppParallel
+SystemRequirements: GNU make
+URL: https://github.com/mbeynaerts/CRFparallel
+BugReports: https://github.com/mbeynaerts/CRFpackage/issues
