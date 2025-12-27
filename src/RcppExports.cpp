@@ -56,32 +56,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// Ind2
-int Ind2(NumericVector& x, NumericVector& y, double& a, double& b);
-RcppExport SEXP _CRFparallel_Ind2(SEXP xSEXP, SEXP ySEXP, SEXP aSEXP, SEXP bSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< NumericVector& >::type x(xSEXP);
-    Rcpp::traits::input_parameter< NumericVector& >::type y(ySEXP);
-    Rcpp::traits::input_parameter< double& >::type a(aSEXP);
-    Rcpp::traits::input_parameter< double& >::type b(bSEXP);
-    rcpp_result_gen = Rcpp::wrap(Ind2(x, y, a, b));
-    return rcpp_result_gen;
-END_RCPP
-}
-// risksetC
-IntegerMatrix risksetC(NumericVector x, NumericVector y);
-RcppExport SEXP _CRFparallel_risksetC(SEXP xSEXP, SEXP ySEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< NumericVector >::type x(xSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type y(ySEXP);
-    rcpp_result_gen = Rcpp::wrap(risksetC(x, y));
-    return rcpp_result_gen;
-END_RCPP
-}
 // riskset_fast
 IntegerMatrix riskset_fast(NumericVector x, NumericVector y);
 RcppExport SEXP _CRFparallel_riskset_fast(SEXP xSEXP, SEXP ySEXP) {
@@ -125,30 +99,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const NumericVector& >::type I5(I5SEXP);
     Rcpp::traits::input_parameter< const NumericVector& >::type I6(I6SEXP);
     rcpp_result_gen = Rcpp::wrap(logLikC(riskset1, riskset2, logtheta1, logtheta2, delta1, delta2, I1, I2, I3, I4, I5, I6));
-    return rcpp_result_gen;
-END_RCPP
-}
-// gradientC
-NumericVector gradientC(const NumericVector& riskset1, const NumericVector& riskset2, const NumericVector& logtheta1, const NumericVector& logtheta2, const Rcpp::List& deriv, const int& df, const NumericVector& delta1, const NumericVector& delta2, const NumericVector& I1, const NumericVector& I2, const NumericVector& I3, const NumericVector& I4, const NumericVector& I5, const NumericVector& I6);
-RcppExport SEXP _CRFparallel_gradientC(SEXP riskset1SEXP, SEXP riskset2SEXP, SEXP logtheta1SEXP, SEXP logtheta2SEXP, SEXP derivSEXP, SEXP dfSEXP, SEXP delta1SEXP, SEXP delta2SEXP, SEXP I1SEXP, SEXP I2SEXP, SEXP I3SEXP, SEXP I4SEXP, SEXP I5SEXP, SEXP I6SEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const NumericVector& >::type riskset1(riskset1SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type riskset2(riskset2SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type logtheta1(logtheta1SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type logtheta2(logtheta2SEXP);
-    Rcpp::traits::input_parameter< const Rcpp::List& >::type deriv(derivSEXP);
-    Rcpp::traits::input_parameter< const int& >::type df(dfSEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type delta1(delta1SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type delta2(delta2SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type I1(I1SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type I2(I2SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type I3(I3SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type I4(I4SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type I5(I5SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type I6(I6SEXP);
-    rcpp_result_gen = Rcpp::wrap(gradientC(riskset1, riskset2, logtheta1, logtheta2, deriv, df, delta1, delta2, I1, I2, I3, I4, I5, I6));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -202,28 +152,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// hessianC
-NumericMatrix hessianC(const NumericVector& riskset1, const NumericVector& riskset2, const NumericVector& logtheta1, const NumericVector& logtheta2, const Rcpp::List& deriv, const NumericVector& delta1, const NumericVector& delta2, const int df, const NumericVector& I1, const NumericVector& I2, const NumericVector& I3, const NumericVector& I4);
-RcppExport SEXP _CRFparallel_hessianC(SEXP riskset1SEXP, SEXP riskset2SEXP, SEXP logtheta1SEXP, SEXP logtheta2SEXP, SEXP derivSEXP, SEXP delta1SEXP, SEXP delta2SEXP, SEXP dfSEXP, SEXP I1SEXP, SEXP I2SEXP, SEXP I3SEXP, SEXP I4SEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const NumericVector& >::type riskset1(riskset1SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type riskset2(riskset2SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type logtheta1(logtheta1SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type logtheta2(logtheta2SEXP);
-    Rcpp::traits::input_parameter< const Rcpp::List& >::type deriv(derivSEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type delta1(delta1SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type delta2(delta2SEXP);
-    Rcpp::traits::input_parameter< const int >::type df(dfSEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type I1(I1SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type I2(I2SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type I3(I3SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type I4(I4SEXP);
-    rcpp_result_gen = Rcpp::wrap(hessianC(riskset1, riskset2, logtheta1, logtheta2, deriv, delta1, delta2, df, I1, I2, I3, I4));
-    return rcpp_result_gen;
-END_RCPP
-}
 // hessianNew
 arma::mat hessianNew(const arma::colvec& riskset1, const arma::colvec& riskset2, const arma::colvec& logtheta1, const arma::colvec& logtheta2, const arma::colvec& delta1, const arma::colvec& delta2, const arma::colvec& I1, const arma::colvec& I2, const arma::colvec& I3, const arma::colvec& I4, const arma::mat& X1, const arma::mat& X2, const arma::uvec& idxN1, const arma::uvec& idxN2);
 RcppExport SEXP _CRFparallel_hessianNew(SEXP riskset1SEXP, SEXP riskset2SEXP, SEXP logtheta1SEXP, SEXP logtheta2SEXP, SEXP delta1SEXP, SEXP delta2SEXP, SEXP I1SEXP, SEXP I2SEXP, SEXP I3SEXP, SEXP I4SEXP, SEXP X1SEXP, SEXP X2SEXP, SEXP idxN1SEXP, SEXP idxN2SEXP) {
@@ -245,6 +173,30 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::uvec& >::type idxN1(idxN1SEXP);
     Rcpp::traits::input_parameter< const arma::uvec& >::type idxN2(idxN2SEXP);
     rcpp_result_gen = Rcpp::wrap(hessianNew(riskset1, riskset2, logtheta1, logtheta2, delta1, delta2, I1, I2, I3, I4, X1, X2, idxN1, idxN2));
+    return rcpp_result_gen;
+END_RCPP
+}
+// hessian_fast
+arma::mat hessian_fast(const arma::colvec& riskset1, const arma::colvec& riskset2, const arma::colvec& logtheta1, const arma::colvec& logtheta2, const arma::colvec& delta1, const arma::colvec& delta2, const arma::colvec& I1, const arma::colvec& I2, const arma::colvec& I3, const arma::colvec& I4, const arma::mat& X1, const arma::mat& X2, const arma::uvec& idxN1, const arma::uvec& idxN2);
+RcppExport SEXP _CRFparallel_hessian_fast(SEXP riskset1SEXP, SEXP riskset2SEXP, SEXP logtheta1SEXP, SEXP logtheta2SEXP, SEXP delta1SEXP, SEXP delta2SEXP, SEXP I1SEXP, SEXP I2SEXP, SEXP I3SEXP, SEXP I4SEXP, SEXP X1SEXP, SEXP X2SEXP, SEXP idxN1SEXP, SEXP idxN2SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::colvec& >::type riskset1(riskset1SEXP);
+    Rcpp::traits::input_parameter< const arma::colvec& >::type riskset2(riskset2SEXP);
+    Rcpp::traits::input_parameter< const arma::colvec& >::type logtheta1(logtheta1SEXP);
+    Rcpp::traits::input_parameter< const arma::colvec& >::type logtheta2(logtheta2SEXP);
+    Rcpp::traits::input_parameter< const arma::colvec& >::type delta1(delta1SEXP);
+    Rcpp::traits::input_parameter< const arma::colvec& >::type delta2(delta2SEXP);
+    Rcpp::traits::input_parameter< const arma::colvec& >::type I1(I1SEXP);
+    Rcpp::traits::input_parameter< const arma::colvec& >::type I2(I2SEXP);
+    Rcpp::traits::input_parameter< const arma::colvec& >::type I3(I3SEXP);
+    Rcpp::traits::input_parameter< const arma::colvec& >::type I4(I4SEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type X1(X1SEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type X2(X2SEXP);
+    Rcpp::traits::input_parameter< const arma::uvec& >::type idxN1(idxN1SEXP);
+    Rcpp::traits::input_parameter< const arma::uvec& >::type idxN2(idxN2SEXP);
+    rcpp_result_gen = Rcpp::wrap(hessian_fast(riskset1, riskset2, logtheta1, logtheta2, delta1, delta2, I1, I2, I3, I4, X1, X2, idxN1, idxN2));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -276,16 +228,13 @@ static const R_CallMethodDef CallEntries[] = {
     {"_CRFparallel_IndGreater", (DL_FUNC) &_CRFparallel_IndGreater, 1},
     {"_CRFparallel_IndLess", (DL_FUNC) &_CRFparallel_IndLess, 1},
     {"_CRFparallel_IndEqual", (DL_FUNC) &_CRFparallel_IndEqual, 1},
-    {"_CRFparallel_Ind2", (DL_FUNC) &_CRFparallel_Ind2, 4},
-    {"_CRFparallel_risksetC", (DL_FUNC) &_CRFparallel_risksetC, 2},
     {"_CRFparallel_riskset_fast", (DL_FUNC) &_CRFparallel_riskset_fast, 2},
     {"_CRFparallel_DeltaC", (DL_FUNC) &_CRFparallel_DeltaC, 2},
     {"_CRFparallel_logLikC", (DL_FUNC) &_CRFparallel_logLikC, 12},
-    {"_CRFparallel_gradientC", (DL_FUNC) &_CRFparallel_gradientC, 14},
     {"_CRFparallel_gradientNew", (DL_FUNC) &_CRFparallel_gradientNew, 16},
     {"_CRFparallel_gradientPoly", (DL_FUNC) &_CRFparallel_gradientPoly, 14},
-    {"_CRFparallel_hessianC", (DL_FUNC) &_CRFparallel_hessianC, 12},
     {"_CRFparallel_hessianNew", (DL_FUNC) &_CRFparallel_hessianNew, 14},
+    {"_CRFparallel_hessian_fast", (DL_FUNC) &_CRFparallel_hessian_fast, 14},
     {"_CRFparallel_hessianPolyC", (DL_FUNC) &_CRFparallel_hessianPolyC, 12},
     {NULL, NULL, 0}
 };

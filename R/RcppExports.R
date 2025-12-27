@@ -17,14 +17,6 @@ IndEqual <- function(x) {
     .Call(`_CRFparallel_IndEqual`, x)
 }
 
-Ind2 <- function(x, y, a, b) {
-    .Call(`_CRFparallel_Ind2`, x, y, a, b)
-}
-
-risksetC <- function(x, y) {
-    .Call(`_CRFparallel_risksetC`, x, y)
-}
-
 riskset_fast <- function(x, y) {
     .Call(`_CRFparallel_riskset_fast`, x, y)
 }
@@ -37,10 +29,6 @@ logLikC <- function(riskset1, riskset2, logtheta1, logtheta2, delta1, delta2, I1
     .Call(`_CRFparallel_logLikC`, riskset1, riskset2, logtheta1, logtheta2, delta1, delta2, I1, I2, I3, I4, I5, I6)
 }
 
-gradientC <- function(riskset1, riskset2, logtheta1, logtheta2, deriv, df, delta1, delta2, I1, I2, I3, I4, I5, I6) {
-    .Call(`_CRFparallel_gradientC`, riskset1, riskset2, logtheta1, logtheta2, deriv, df, delta1, delta2, I1, I2, I3, I4, I5, I6)
-}
-
 gradientNew <- function(riskset1, riskset2, logtheta1, logtheta2, delta1, delta2, I1, I2, I3, I4, I5, I6, X1, X2, idxN1, idxN2) {
     .Call(`_CRFparallel_gradientNew`, riskset1, riskset2, logtheta1, logtheta2, delta1, delta2, I1, I2, I3, I4, I5, I6, X1, X2, idxN1, idxN2)
 }
@@ -49,12 +37,12 @@ gradientPoly <- function(riskset1, riskset2, logtheta1, logtheta2, deriv, df, de
     .Call(`_CRFparallel_gradientPoly`, riskset1, riskset2, logtheta1, logtheta2, deriv, df, delta1, delta2, I1, I2, I3, I4, I5, I6)
 }
 
-hessianC <- function(riskset1, riskset2, logtheta1, logtheta2, deriv, delta1, delta2, df, I1, I2, I3, I4) {
-    .Call(`_CRFparallel_hessianC`, riskset1, riskset2, logtheta1, logtheta2, deriv, delta1, delta2, df, I1, I2, I3, I4)
-}
-
 hessianNew <- function(riskset1, riskset2, logtheta1, logtheta2, delta1, delta2, I1, I2, I3, I4, X1, X2, idxN1, idxN2) {
     .Call(`_CRFparallel_hessianNew`, riskset1, riskset2, logtheta1, logtheta2, delta1, delta2, I1, I2, I3, I4, X1, X2, idxN1, idxN2)
+}
+
+hessian_fast <- function(riskset1, riskset2, logtheta1, logtheta2, delta1, delta2, I1, I2, I3, I4, X1, X2, idxN1, idxN2) {
+    .Call(`_CRFparallel_hessian_fast`, riskset1, riskset2, logtheta1, logtheta2, delta1, delta2, I1, I2, I3, I4, X1, X2, idxN1, idxN2)
 }
 
 hessianPolyC <- function(riskset1, riskset2, logtheta1, logtheta2, deriv, df, delta1, delta2, I1, I2, I3, I4) {

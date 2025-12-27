@@ -409,8 +409,12 @@ Hessian <- function (coef.vector, X1, X2, Sl = NULL, datalist) {
 
   # Tensor product spline
   logtheta <- WoodTensor(X1, X2, coef.vector = coef.vector)
+  
+  # print(logtheta[1:10, 1:10])
+
   logtheta2 <- c(logtheta)[datalist$idxN2]
   logtheta1 <- c(t(logtheta))[datalist$idxN1]
+  
   rm(logtheta)
 
   # hessianold <- hessianC(riskset1 = datalist$riskset1,
@@ -425,8 +429,8 @@ Hessian <- function (coef.vector, X1, X2, Sl = NULL, datalist) {
   #                     I2 = datalist$I2,
   #                     I3 = datalist$I3,
   #                     I4 = datalist$I4)
-
-  hessian <- hessianNew(riskset1 = datalist$riskset1,
+  
+  hessian <- hessian_fast(riskset1 = datalist$riskset1,
                         riskset2 = datalist$riskset2,
                         logtheta1 = logtheta1,
                         logtheta2 = logtheta2,
@@ -651,7 +655,8 @@ SimData <- function (K, cens.par = 0, alpha = c(3,5,1.5), weights = c(0.2,0.4,0.
   # N1 <- c(t(N))
   # N2 <- c(N)
 
-  N <- riskset_fast(X[,1],X[,2]); mode(N) <- "integer"
+  N <- riskset_fast(X[,1],X[,2]);
+  # mode(N) <- "integer"
   N1 <- c(t(N))
   N2 <- c(N)
 
@@ -1080,7 +1085,7 @@ EstimatePenal2 <- function(datalist, dim, degree = 3, lambda.init = c(1,1), star
   return(list(
     beta = fit$beta,
     lambda = lambda.new,
-    vcov = solve(fit$hessian + lambda.new[1]*S1 + lambda.new[2]*S2),
+    vcov = sqrt(2)*solve(fit$hessian + lambda.new[1]*S1 + lambda.new[2]*S2),
     iterations = iter,
     ll = fit$ll,
     history = score[1:iter],
