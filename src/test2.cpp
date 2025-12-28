@@ -60,59 +60,75 @@ struct riskset_worker : public RcppParallel::Worker {
   }
 };
 
+
 struct HessianWorker : public Worker {
   
-  const arma::colvec& common1;
-  const arma::colvec& common2;
   const arma::mat& X1;
   const arma::mat& X2;
   const arma::uvec& idxN1;
   const arma::uvec& idxN2;
+  
+  arma::mat& D1;
+  arma::mat& D2;
+
   int dim;
-  int totalparam;
+  int nrow1;
+  int nrow2;
+
+  HessianWorker(const arma::mat& X1_,
+              const arma::mat& X2_,
+              const arma::uvec& idxN1_,
+              const arma::uvec& idxN2_,
+              arma::mat& D1_,
+              arma::mat& D2_)
+    : X1(X1_), X2(X2_),
+      idxN1(idxN1_), idxN2(idxN2_),
+      D1(D1_), D2(D2_) {
   
-  arma::mat& result;
-  
-  HessianWorker(const arma::colvec& common1_,
-                const arma::colvec& common2_,
-                const arma::mat& X1_,
-                const arma::mat& X2_,
-                const arma::uvec& idxN1_,
-                const arma::uvec& idxN2_,
-                arma::mat& result_)
-    : common1(common1_), common2(common2_),
-      X1(X1_), X2(X2_), idxN1(idxN1_), idxN2(idxN2_),
-      result(result_) {
-    dim = X1.n_cols;
-    totalparam = dim * dim;
+    dim   = X1.n_cols;
+    nrow1 = X1.n_rows;
+    nrow2 = X2.n_rows;
   }
+
+  inline void fill_deriv(arma::colvec& out,
+                         const arma::colvec& a,
+                         const arma::colvec& b,
+                         const arma::uvec& idx,
+                         bool transpose) {
   
-  void operator()(std::size_t m_start, std::size_t m_end) {
-    for (std::size_t m = m_start; m < m_end; ++m) {
-      
-      int idx1m = m % dim;
-      int idx2m = m / dim;
-      
-      arma::mat deriv_mat_m = arma::kron(X1.col(idx1m), X2.col(idx2m).t());
-      arma::colvec deriv1m = arma::vectorise(deriv_mat_m.t());
-      arma::colvec deriv2m = arma::vectorise(deriv_mat_m);
-      
-      for (int l = m; l < totalparam; ++l) {
-        int idx1l = l % dim;
-        int idx2l = l / dim;
-        
-        arma::mat deriv_mat_l = arma::kron(X1.col(idx1l), X2.col(idx2l).t());
-        arma::colvec deriv1l = arma::vectorise(deriv_mat_l.t());
-        arma::colvec deriv2l = arma::vectorise(deriv_mat_l);
-        
-        double sum1 = arma::accu(common1 % deriv1m.elem(idxN1) % deriv1l.elem(idxN1));
-        double sum2 = arma::accu(common2 % deriv2m.elem(idxN2) % deriv2l.elem(idxN2));
-        
-        result(l, m) = -sum1 - sum2;
+    for (arma::uword k = 0; k < idx.n_elem; ++k) {
+      arma::uword pos = idx[k];
+      arma::uword r, c;
+    
+      if (transpose) {
+        r = pos % nrow2;
+        c = pos / nrow2;
+        out[k] = a[c] * b[r];
+      } else {
+        r = pos % nrow1;
+        c = pos / nrow1;
+        out[k] = a[r] * b[c];
       }
     }
   }
+
+  void operator()(std::size_t begin, std::size_t end) {
+    arma::colvec tmp1(idxN1.n_elem);
+    arma::colvec tmp2(idxN2.n_elem);
+  
+    for (std::size_t m = begin; m < end; ++m) {
+      int i = m % dim;
+      int j = m / dim;
+    
+      fill_deriv(tmp1, X1.col(i), X2.col(j), idxN1, true);
+      fill_deriv(tmp2, X1.col(i), X2.col(j), idxN2, false);
+    
+      D1.col(m) = tmp1;
+      D2.col(m) = tmp2;
+     }
+  }
 };
+
 
 
 // Slow parallel implementation
@@ -355,7 +371,6 @@ NumericVector gradientNew(const arma::colvec &riskset1,
 
 }
 
-
 // [[Rcpp::export]]
 NumericVector gradientPoly(const NumericVector &riskset1,
                            const NumericVector &riskset2,
@@ -551,15 +566,18 @@ arma::mat hessian_fast(
     arma::mat D1(idxN1.n_elem, totalparam);
     arma::mat D2(idxN2.n_elem, totalparam);
     
+    // HessianWorker worker(X1, X2, idxN1, idxN2, D1, D2);
+    // parallelFor(0, totalparam, worker);
+    
     for (int m = 0; m < totalparam; ++m) {
       int i = m % dim;
       int j = m / dim;
-      
+
       arma::mat K = arma::kron(X1.col(i), X2.col(j).t());
-      
+
       arma::colvec d1 = arma::vectorise(K.t());
       arma::colvec d2 = arma::vectorise(K);
-      
+
       D1.col(m) = d1.elem(idxN1);
       D2.col(m) = d2.elem(idxN2);
     }
@@ -568,9 +586,9 @@ arma::mat hessian_fast(
     // Hessian via weighted Gram matrices
     // --------------------------------------------------
     
-    arma::mat H =
-      - (D1.t() * arma::diagmat(common1) * D1)
-      - (D2.t() * arma::diagmat(common2) * D2);
+    // arma::mat H = - (D1.t() * arma::diagmat(common1) * D1) - (D2.t() * arma::diagmat(common2) * D2);
+    arma::mat H = - (D1.each_col() % common1).t() * D1 - (D2.each_col() % common2).t() * D2;
+    
       
       return arma::symmatl(H);
 }

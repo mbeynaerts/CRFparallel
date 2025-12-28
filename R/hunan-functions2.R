@@ -504,7 +504,7 @@ Score2 <- function(coef.vector, X1, X2, datalist, Sl = NULL) {
   #                       I4 = datalist$I4,
   #                       I5 = datalist$I5,
   #                       I6 = datalist$I6) # gradientC returns vector of derivatives of -loglik
-
+  
   gradient <- gradientNew(riskset1 = datalist$riskset1,
                           riskset2 = datalist$riskset2,
                           logtheta1 = logtheta1,
