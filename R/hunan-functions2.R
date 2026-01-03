@@ -421,7 +421,7 @@ deriv_comp_poly <- function(datalist) {
 # }
 #
 
-Hessian <- function (coef.vector, X1, X2, Sl = NULL, datalist, batch_size = 1000) {
+Hessian <- function (coef.vector, X1, X2, Sl = NULL, datalist, ncores = 1, batch_size = 1000) {
   
   # df <- ncol(X1)
 
@@ -492,7 +492,8 @@ HessianPoly <- function(beta, datalist, deriv) {
 }
 
 
-Score2 <- function(coef.vector, X1, X2, datalist, Sl = NULL) {
+Score2 <- function(coef.vector, X1, X2, datalist, Sl = NULL, ncores = 1) {
+  # Note that ncores = 1 has to be present for nleqsvl to work (same inputs needed as Hessian)
 
   # Tensor product spline
   # logtheta <- WoodTensor(X1, X2, coef.vector = coef.vector)
