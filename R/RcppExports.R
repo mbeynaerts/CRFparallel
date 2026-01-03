@@ -5,44 +5,52 @@ row_kron <- function(X, Y) {
     .Call(`_CRFparallel_row_kron`, X, Y)
 }
 
-IndGreater <- function(x) {
-    .Call(`_CRFparallel_IndGreater`, x)
+indgreater <- function(x) {
+    .Call(`_CRFparallel_indgreater`, x)
 }
 
-IndLess <- function(x) {
-    .Call(`_CRFparallel_IndLess`, x)
+indless <- function(x) {
+    .Call(`_CRFparallel_indless`, x)
 }
 
-IndEqual <- function(x) {
-    .Call(`_CRFparallel_IndEqual`, x)
+indequal <- function(x) {
+    .Call(`_CRFparallel_indequal`, x)
 }
 
 riskset_fast <- function(x, y) {
     .Call(`_CRFparallel_riskset_fast`, x, y)
 }
 
-DeltaC <- function(x, y) {
-    .Call(`_CRFparallel_DeltaC`, x, y)
+delta <- function(x, y) {
+    .Call(`_CRFparallel_delta`, x, y)
 }
 
-logLikC <- function(riskset1, riskset2, logtheta1, logtheta2, delta1, delta2, I1, I2, I3, I4, I5, I6) {
-    .Call(`_CRFparallel_logLikC`, riskset1, riskset2, logtheta1, logtheta2, delta1, delta2, I1, I2, I3, I4, I5, I6)
+loglikC <- function(x, datalist, X1, X2) {
+    .Call(`_CRFparallel_loglikC`, x, datalist, X1, X2)
 }
 
-gradientNew <- function(riskset1, riskset2, logtheta1, logtheta2, delta1, delta2, I1, I2, I3, I4, I5, I6, X1, X2, idxN1, idxN2) {
-    .Call(`_CRFparallel_gradientNew`, riskset1, riskset2, logtheta1, logtheta2, delta1, delta2, I1, I2, I3, I4, I5, I6, X1, X2, idxN1, idxN2)
+gradient_fast <- function(x, datalist, X1, X2) {
+    .Call(`_CRFparallel_gradient_fast`, x, datalist, X1, X2)
 }
 
 gradientPoly <- function(riskset1, riskset2, logtheta1, logtheta2, deriv, df, delta1, delta2, I1, I2, I3, I4, I5, I6) {
     .Call(`_CRFparallel_gradientPoly`, riskset1, riskset2, logtheta1, logtheta2, deriv, df, delta1, delta2, I1, I2, I3, I4, I5, I6)
 }
 
-hessianNew <- function(riskset1, riskset2, logtheta1, logtheta2, delta1, delta2, I1, I2, I3, I4, X1, X2, idxN1, idxN2) {
-    .Call(`_CRFparallel_hessianNew`, riskset1, riskset2, logtheta1, logtheta2, delta1, delta2, I1, I2, I3, I4, X1, X2, idxN1, idxN2)
+hessian_fast <- function(x, datalist, X1, X2) {
+    .Call(`_CRFparallel_hessian_fast`, x, datalist, X1, X2)
 }
 
-hessian_fast <- function(riskset1, riskset2, logtheta1, logtheta2, delta1, delta2, I1, I2, I3, I4, X1, X2, idxN1, idxN2) {
-    .Call(`_CRFparallel_hessian_fast`, riskset1, riskset2, logtheta1, logtheta2, delta1, delta2, I1, I2, I3, I4, X1, X2, idxN1, idxN2)
+hessian_fast_efficient <- function(x, datalist, X1, X2) {
+    .Call(`_CRFparallel_hessian_fast_efficient`, x, datalist, X1, X2)
+}
+
+hessian_fast_batched <- function(x, datalist, X1, X2, batch_size = 1000L) {
+    .Call(`_CRFparallel_hessian_fast_batched`, x, datalist, X1, X2, batch_size)
+}
+
+hessian_fast_batched_parallel <- function(x, datalist, X1, X2, batch_size = 1000L) {
+    .Call(`_CRFparallel_hessian_fast_batched_parallel`, x, datalist, X1, X2, batch_size)
 }
 
 hessianPolyC <- function(riskset1, riskset2, logtheta1, logtheta2, deriv, df, delta1, delta2, I1, I2, I3, I4) {

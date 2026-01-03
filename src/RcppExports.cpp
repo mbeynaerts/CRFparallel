@@ -23,36 +23,36 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// IndGreater
-IntegerMatrix IndGreater(NumericVector& x);
-RcppExport SEXP _CRFparallel_IndGreater(SEXP xSEXP) {
+// indgreater
+IntegerMatrix indgreater(NumericVector& x);
+RcppExport SEXP _CRFparallel_indgreater(SEXP xSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< NumericVector& >::type x(xSEXP);
-    rcpp_result_gen = Rcpp::wrap(IndGreater(x));
+    rcpp_result_gen = Rcpp::wrap(indgreater(x));
     return rcpp_result_gen;
 END_RCPP
 }
-// IndLess
-IntegerMatrix IndLess(NumericVector& x);
-RcppExport SEXP _CRFparallel_IndLess(SEXP xSEXP) {
+// indless
+IntegerMatrix indless(NumericVector& x);
+RcppExport SEXP _CRFparallel_indless(SEXP xSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< NumericVector& >::type x(xSEXP);
-    rcpp_result_gen = Rcpp::wrap(IndLess(x));
+    rcpp_result_gen = Rcpp::wrap(indless(x));
     return rcpp_result_gen;
 END_RCPP
 }
-// IndEqual
-IntegerMatrix IndEqual(NumericVector& x);
-RcppExport SEXP _CRFparallel_IndEqual(SEXP xSEXP) {
+// indequal
+IntegerMatrix indequal(NumericVector& x);
+RcppExport SEXP _CRFparallel_indequal(SEXP xSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< NumericVector& >::type x(xSEXP);
-    rcpp_result_gen = Rcpp::wrap(IndEqual(x));
+    rcpp_result_gen = Rcpp::wrap(indequal(x));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -68,63 +68,43 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// DeltaC
-IntegerMatrix DeltaC(NumericVector& x, NumericVector& y);
-RcppExport SEXP _CRFparallel_DeltaC(SEXP xSEXP, SEXP ySEXP) {
+// delta
+IntegerMatrix delta(NumericVector& x, NumericVector& y);
+RcppExport SEXP _CRFparallel_delta(SEXP xSEXP, SEXP ySEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< NumericVector& >::type x(xSEXP);
     Rcpp::traits::input_parameter< NumericVector& >::type y(ySEXP);
-    rcpp_result_gen = Rcpp::wrap(DeltaC(x, y));
+    rcpp_result_gen = Rcpp::wrap(delta(x, y));
     return rcpp_result_gen;
 END_RCPP
 }
-// logLikC
-double logLikC(const NumericVector& riskset1, const NumericVector& riskset2, const NumericVector& logtheta1, const NumericVector& logtheta2, const NumericVector& delta1, const NumericVector& delta2, const NumericVector& I1, const NumericVector& I2, const NumericVector& I3, const NumericVector& I4, const NumericVector& I5, const NumericVector& I6);
-RcppExport SEXP _CRFparallel_logLikC(SEXP riskset1SEXP, SEXP riskset2SEXP, SEXP logtheta1SEXP, SEXP logtheta2SEXP, SEXP delta1SEXP, SEXP delta2SEXP, SEXP I1SEXP, SEXP I2SEXP, SEXP I3SEXP, SEXP I4SEXP, SEXP I5SEXP, SEXP I6SEXP) {
+// loglikC
+double loglikC(arma::colvec& x, const Rcpp::List& datalist, const arma::mat& X1, const arma::mat& X2);
+RcppExport SEXP _CRFparallel_loglikC(SEXP xSEXP, SEXP datalistSEXP, SEXP X1SEXP, SEXP X2SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const NumericVector& >::type riskset1(riskset1SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type riskset2(riskset2SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type logtheta1(logtheta1SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type logtheta2(logtheta2SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type delta1(delta1SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type delta2(delta2SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type I1(I1SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type I2(I2SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type I3(I3SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type I4(I4SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type I5(I5SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type I6(I6SEXP);
-    rcpp_result_gen = Rcpp::wrap(logLikC(riskset1, riskset2, logtheta1, logtheta2, delta1, delta2, I1, I2, I3, I4, I5, I6));
-    return rcpp_result_gen;
-END_RCPP
-}
-// gradientNew
-NumericVector gradientNew(const arma::colvec& riskset1, const arma::colvec& riskset2, const arma::colvec& logtheta1, const arma::colvec& logtheta2, const arma::colvec& delta1, const arma::colvec& delta2, const arma::colvec& I1, const arma::colvec& I2, const arma::colvec& I3, const arma::colvec& I4, const arma::colvec& I5, const arma::colvec& I6, const arma::mat& X1, const arma::mat& X2, const arma::uvec& idxN1, const arma::uvec& idxN2);
-RcppExport SEXP _CRFparallel_gradientNew(SEXP riskset1SEXP, SEXP riskset2SEXP, SEXP logtheta1SEXP, SEXP logtheta2SEXP, SEXP delta1SEXP, SEXP delta2SEXP, SEXP I1SEXP, SEXP I2SEXP, SEXP I3SEXP, SEXP I4SEXP, SEXP I5SEXP, SEXP I6SEXP, SEXP X1SEXP, SEXP X2SEXP, SEXP idxN1SEXP, SEXP idxN2SEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::colvec& >::type riskset1(riskset1SEXP);
-    Rcpp::traits::input_parameter< const arma::colvec& >::type riskset2(riskset2SEXP);
-    Rcpp::traits::input_parameter< const arma::colvec& >::type logtheta1(logtheta1SEXP);
-    Rcpp::traits::input_parameter< const arma::colvec& >::type logtheta2(logtheta2SEXP);
-    Rcpp::traits::input_parameter< const arma::colvec& >::type delta1(delta1SEXP);
-    Rcpp::traits::input_parameter< const arma::colvec& >::type delta2(delta2SEXP);
-    Rcpp::traits::input_parameter< const arma::colvec& >::type I1(I1SEXP);
-    Rcpp::traits::input_parameter< const arma::colvec& >::type I2(I2SEXP);
-    Rcpp::traits::input_parameter< const arma::colvec& >::type I3(I3SEXP);
-    Rcpp::traits::input_parameter< const arma::colvec& >::type I4(I4SEXP);
-    Rcpp::traits::input_parameter< const arma::colvec& >::type I5(I5SEXP);
-    Rcpp::traits::input_parameter< const arma::colvec& >::type I6(I6SEXP);
+    Rcpp::traits::input_parameter< arma::colvec& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type datalist(datalistSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type X1(X1SEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type X2(X2SEXP);
-    Rcpp::traits::input_parameter< const arma::uvec& >::type idxN1(idxN1SEXP);
-    Rcpp::traits::input_parameter< const arma::uvec& >::type idxN2(idxN2SEXP);
-    rcpp_result_gen = Rcpp::wrap(gradientNew(riskset1, riskset2, logtheta1, logtheta2, delta1, delta2, I1, I2, I3, I4, I5, I6, X1, X2, idxN1, idxN2));
+    rcpp_result_gen = Rcpp::wrap(loglikC(x, datalist, X1, X2));
+    return rcpp_result_gen;
+END_RCPP
+}
+// gradient_fast
+arma::vec gradient_fast(arma::colvec& x, const Rcpp::List& datalist, const arma::mat& X1, const arma::mat& X2);
+RcppExport SEXP _CRFparallel_gradient_fast(SEXP xSEXP, SEXP datalistSEXP, SEXP X1SEXP, SEXP X2SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::colvec& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type datalist(datalistSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type X1(X1SEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type X2(X2SEXP);
+    rcpp_result_gen = Rcpp::wrap(gradient_fast(x, datalist, X1, X2));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -152,51 +132,61 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// hessianNew
-arma::mat hessianNew(const arma::colvec& riskset1, const arma::colvec& riskset2, const arma::colvec& logtheta1, const arma::colvec& logtheta2, const arma::colvec& delta1, const arma::colvec& delta2, const arma::colvec& I1, const arma::colvec& I2, const arma::colvec& I3, const arma::colvec& I4, const arma::mat& X1, const arma::mat& X2, const arma::uvec& idxN1, const arma::uvec& idxN2);
-RcppExport SEXP _CRFparallel_hessianNew(SEXP riskset1SEXP, SEXP riskset2SEXP, SEXP logtheta1SEXP, SEXP logtheta2SEXP, SEXP delta1SEXP, SEXP delta2SEXP, SEXP I1SEXP, SEXP I2SEXP, SEXP I3SEXP, SEXP I4SEXP, SEXP X1SEXP, SEXP X2SEXP, SEXP idxN1SEXP, SEXP idxN2SEXP) {
+// hessian_fast
+arma::mat hessian_fast(arma::colvec& x, const Rcpp::List& datalist, const arma::mat& X1, const arma::mat& X2);
+RcppExport SEXP _CRFparallel_hessian_fast(SEXP xSEXP, SEXP datalistSEXP, SEXP X1SEXP, SEXP X2SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::colvec& >::type riskset1(riskset1SEXP);
-    Rcpp::traits::input_parameter< const arma::colvec& >::type riskset2(riskset2SEXP);
-    Rcpp::traits::input_parameter< const arma::colvec& >::type logtheta1(logtheta1SEXP);
-    Rcpp::traits::input_parameter< const arma::colvec& >::type logtheta2(logtheta2SEXP);
-    Rcpp::traits::input_parameter< const arma::colvec& >::type delta1(delta1SEXP);
-    Rcpp::traits::input_parameter< const arma::colvec& >::type delta2(delta2SEXP);
-    Rcpp::traits::input_parameter< const arma::colvec& >::type I1(I1SEXP);
-    Rcpp::traits::input_parameter< const arma::colvec& >::type I2(I2SEXP);
-    Rcpp::traits::input_parameter< const arma::colvec& >::type I3(I3SEXP);
-    Rcpp::traits::input_parameter< const arma::colvec& >::type I4(I4SEXP);
+    Rcpp::traits::input_parameter< arma::colvec& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type datalist(datalistSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type X1(X1SEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type X2(X2SEXP);
-    Rcpp::traits::input_parameter< const arma::uvec& >::type idxN1(idxN1SEXP);
-    Rcpp::traits::input_parameter< const arma::uvec& >::type idxN2(idxN2SEXP);
-    rcpp_result_gen = Rcpp::wrap(hessianNew(riskset1, riskset2, logtheta1, logtheta2, delta1, delta2, I1, I2, I3, I4, X1, X2, idxN1, idxN2));
+    rcpp_result_gen = Rcpp::wrap(hessian_fast(x, datalist, X1, X2));
     return rcpp_result_gen;
 END_RCPP
 }
-// hessian_fast
-arma::mat hessian_fast(const arma::colvec& riskset1, const arma::colvec& riskset2, const arma::colvec& logtheta1, const arma::colvec& logtheta2, const arma::colvec& delta1, const arma::colvec& delta2, const arma::colvec& I1, const arma::colvec& I2, const arma::colvec& I3, const arma::colvec& I4, const arma::mat& X1, const arma::mat& X2, const arma::uvec& idxN1, const arma::uvec& idxN2);
-RcppExport SEXP _CRFparallel_hessian_fast(SEXP riskset1SEXP, SEXP riskset2SEXP, SEXP logtheta1SEXP, SEXP logtheta2SEXP, SEXP delta1SEXP, SEXP delta2SEXP, SEXP I1SEXP, SEXP I2SEXP, SEXP I3SEXP, SEXP I4SEXP, SEXP X1SEXP, SEXP X2SEXP, SEXP idxN1SEXP, SEXP idxN2SEXP) {
+// hessian_fast_efficient
+arma::mat hessian_fast_efficient(arma::colvec& x, const Rcpp::List& datalist, const arma::mat& X1, const arma::mat& X2);
+RcppExport SEXP _CRFparallel_hessian_fast_efficient(SEXP xSEXP, SEXP datalistSEXP, SEXP X1SEXP, SEXP X2SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::colvec& >::type riskset1(riskset1SEXP);
-    Rcpp::traits::input_parameter< const arma::colvec& >::type riskset2(riskset2SEXP);
-    Rcpp::traits::input_parameter< const arma::colvec& >::type logtheta1(logtheta1SEXP);
-    Rcpp::traits::input_parameter< const arma::colvec& >::type logtheta2(logtheta2SEXP);
-    Rcpp::traits::input_parameter< const arma::colvec& >::type delta1(delta1SEXP);
-    Rcpp::traits::input_parameter< const arma::colvec& >::type delta2(delta2SEXP);
-    Rcpp::traits::input_parameter< const arma::colvec& >::type I1(I1SEXP);
-    Rcpp::traits::input_parameter< const arma::colvec& >::type I2(I2SEXP);
-    Rcpp::traits::input_parameter< const arma::colvec& >::type I3(I3SEXP);
-    Rcpp::traits::input_parameter< const arma::colvec& >::type I4(I4SEXP);
+    Rcpp::traits::input_parameter< arma::colvec& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type datalist(datalistSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type X1(X1SEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type X2(X2SEXP);
-    Rcpp::traits::input_parameter< const arma::uvec& >::type idxN1(idxN1SEXP);
-    Rcpp::traits::input_parameter< const arma::uvec& >::type idxN2(idxN2SEXP);
-    rcpp_result_gen = Rcpp::wrap(hessian_fast(riskset1, riskset2, logtheta1, logtheta2, delta1, delta2, I1, I2, I3, I4, X1, X2, idxN1, idxN2));
+    rcpp_result_gen = Rcpp::wrap(hessian_fast_efficient(x, datalist, X1, X2));
+    return rcpp_result_gen;
+END_RCPP
+}
+// hessian_fast_batched
+arma::mat hessian_fast_batched(arma::colvec& x, const Rcpp::List& datalist, const arma::mat& X1, const arma::mat& X2, int batch_size);
+RcppExport SEXP _CRFparallel_hessian_fast_batched(SEXP xSEXP, SEXP datalistSEXP, SEXP X1SEXP, SEXP X2SEXP, SEXP batch_sizeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::colvec& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type datalist(datalistSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type X1(X1SEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type X2(X2SEXP);
+    Rcpp::traits::input_parameter< int >::type batch_size(batch_sizeSEXP);
+    rcpp_result_gen = Rcpp::wrap(hessian_fast_batched(x, datalist, X1, X2, batch_size));
+    return rcpp_result_gen;
+END_RCPP
+}
+// hessian_fast_batched_parallel
+arma::mat hessian_fast_batched_parallel(arma::colvec& x, const Rcpp::List& datalist, const arma::mat& X1, const arma::mat& X2, int batch_size);
+RcppExport SEXP _CRFparallel_hessian_fast_batched_parallel(SEXP xSEXP, SEXP datalistSEXP, SEXP X1SEXP, SEXP X2SEXP, SEXP batch_sizeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::colvec& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type datalist(datalistSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type X1(X1SEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type X2(X2SEXP);
+    Rcpp::traits::input_parameter< int >::type batch_size(batch_sizeSEXP);
+    rcpp_result_gen = Rcpp::wrap(hessian_fast_batched_parallel(x, datalist, X1, X2, batch_size));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -225,16 +215,18 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_CRFparallel_row_kron", (DL_FUNC) &_CRFparallel_row_kron, 2},
-    {"_CRFparallel_IndGreater", (DL_FUNC) &_CRFparallel_IndGreater, 1},
-    {"_CRFparallel_IndLess", (DL_FUNC) &_CRFparallel_IndLess, 1},
-    {"_CRFparallel_IndEqual", (DL_FUNC) &_CRFparallel_IndEqual, 1},
+    {"_CRFparallel_indgreater", (DL_FUNC) &_CRFparallel_indgreater, 1},
+    {"_CRFparallel_indless", (DL_FUNC) &_CRFparallel_indless, 1},
+    {"_CRFparallel_indequal", (DL_FUNC) &_CRFparallel_indequal, 1},
     {"_CRFparallel_riskset_fast", (DL_FUNC) &_CRFparallel_riskset_fast, 2},
-    {"_CRFparallel_DeltaC", (DL_FUNC) &_CRFparallel_DeltaC, 2},
-    {"_CRFparallel_logLikC", (DL_FUNC) &_CRFparallel_logLikC, 12},
-    {"_CRFparallel_gradientNew", (DL_FUNC) &_CRFparallel_gradientNew, 16},
+    {"_CRFparallel_delta", (DL_FUNC) &_CRFparallel_delta, 2},
+    {"_CRFparallel_loglikC", (DL_FUNC) &_CRFparallel_loglikC, 4},
+    {"_CRFparallel_gradient_fast", (DL_FUNC) &_CRFparallel_gradient_fast, 4},
     {"_CRFparallel_gradientPoly", (DL_FUNC) &_CRFparallel_gradientPoly, 14},
-    {"_CRFparallel_hessianNew", (DL_FUNC) &_CRFparallel_hessianNew, 14},
-    {"_CRFparallel_hessian_fast", (DL_FUNC) &_CRFparallel_hessian_fast, 14},
+    {"_CRFparallel_hessian_fast", (DL_FUNC) &_CRFparallel_hessian_fast, 4},
+    {"_CRFparallel_hessian_fast_efficient", (DL_FUNC) &_CRFparallel_hessian_fast_efficient, 4},
+    {"_CRFparallel_hessian_fast_batched", (DL_FUNC) &_CRFparallel_hessian_fast_batched, 5},
+    {"_CRFparallel_hessian_fast_batched_parallel", (DL_FUNC) &_CRFparallel_hessian_fast_batched_parallel, 5},
     {"_CRFparallel_hessianPolyC", (DL_FUNC) &_CRFparallel_hessianPolyC, 12},
     {NULL, NULL, 0}
 };

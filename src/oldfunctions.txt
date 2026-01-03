@@ -1,0 +1,209 @@
+
+
+
+// Slow parallel implementation
+// struct riskset : public Worker {
+//   
+//   // Input
+//   RVector<double> x;
+//   RVector<double> y;
+//   std::size_t n;
+//   
+//   // Output
+//   RMatrix<int> N;
+//   
+//   // Helper function
+//   int Ind2(const double &a, const double &b) {
+//     int sum = 0;
+//     for (std::size_t i=0; i<n; i++) {
+//       if (x[i] >= a and y[i] >= b) {
+//         sum++;
+//       }
+//     }
+//     return sum;
+//   }
+//   
+//   // Worker
+//   riskset(const NumericVector x, const NumericVector y, IntegerMatrix N)
+//     : x(x), y(y), n(x.size()), N(N) {}
+//   
+//   // Parallel loop
+//   void operator() (std::size_t begin, std::size_t end) {
+//     for (std::size_t j=begin; j<end; j++) {
+//       for (std::size_t i=0; i<n; i++) {
+//         N(j,i) = Ind2(x[j], y[i]);
+//       }
+//     }
+//   }
+//   
+// };
+
+arma::vec gradientNew(arma::colvec& x,
+                          const Rcpp::List& datalist,
+                          const arma::mat &X1,
+                          const arma::mat &X2) {
+
+
+  int dim = X1.n_cols;
+  DataInput input(datalist);
+  
+  const arma::colvec& riskset1 = input.get_riskset1();
+  const arma::colvec& riskset2 = input.get_riskset2();
+  const arma::colvec& delta1 = input.get_delta1();
+  const arma::colvec& delta2 = input.get_delta2();
+  const arma::colvec& I1 = input.get_I1();
+  const arma::colvec& I2 = input.get_I2();
+  const arma::colvec& I3 = input.get_I3();
+  const arma::colvec& I4 = input.get_I4();
+  const arma::colvec& I5 = input.get_I5();
+  const arma::colvec& I6 = input.get_I6();
+  const arma::uvec& idxN1 = input.get_idxN1();
+  const arma::uvec& idxN2 = input.get_idxN2();
+  
+  // Calculation of logtheta
+  arma::mat coefmat(x.memptr(), dim, dim, false, true);
+  arma::mat logtheta = X1 * coefmat * X2.t();
+  arma::colvec logtheta2 = arma::vectorise(logtheta);
+  arma::colvec logtheta1 = arma::vectorise(logtheta.t());
+  
+  
+  // Calculation of the common component of the gradient
+  int K = X1.n_rows;
+  int n = riskset1.size();
+  int totalparam = pow(dim, 2);
+  arma::vec result(totalparam);
+  arma::colvec common1(n);
+  arma::colvec common2(n);
+  
+  arma::vec exp_neg1 = arma::exp(-logtheta1.elem(idxN1));
+  arma::vec exp_neg2 = arma::exp(-logtheta2.elem(idxN2));
+  
+  common1 = delta1 % I1 % ( I5 - I2 / ( (riskset1 - I2) % exp_neg1 + I2 ) );
+  common2 = delta2 % I3 % ( I6 - I4 / ( (riskset2 - I4) % exp_neg2 + I4 ) );
+
+  arma::mat deriv_mat(K,K);
+  arma::mat deriv_mat_t(K,K);
+  arma::colvec deriv1(deriv_mat_t.memptr(), deriv_mat_t.n_elem, false, true);
+  arma::colvec deriv2(deriv_mat.memptr(), deriv_mat.n_elem, false, true);
+
+  for (int m=0; m<totalparam; m++) {
+
+    int idx1 = m % dim;
+    int idx2 = m / dim;
+
+    deriv_mat = arma::kron(X1.col(idx1), X2.col(idx2).as_row());
+    deriv_mat_t = deriv_mat.t();
+
+    double sum1 = arma::accu(common1 % deriv1.elem(idxN1));
+    double sum2 = arma::accu(common2 % deriv2.elem(idxN2));
+
+    result(m) = -sum1-sum2;
+
+  }
+
+  return(result);
+
+}
+
+
+
+
+
+arma::mat hessianNew(const arma::colvec& riskset1,
+                     const arma::colvec &riskset2,
+                     const arma::colvec &logtheta1,
+                     const arma::colvec &logtheta2,
+                     const arma::colvec &delta1,
+                     const arma::colvec &delta2,
+                     const arma::colvec &I1,
+                     const arma::colvec &I2,
+                     const arma::colvec &I3,
+                     const arma::colvec &I4,
+                     const arma::mat& X1,
+                     const arma::mat& X2,
+                     const arma::uvec& idxN1,
+                     const arma::uvec& idxN2) {
+
+  int K = X1.n_rows;
+  int n = riskset1.n_rows;
+  int dim = X1.n_cols;
+  int totalparam = dim*dim;
+  arma::colvec common1(n);
+  arma::colvec common2(n);
+
+  arma::mat result(totalparam, totalparam, arma::fill::zeros);
+  
+  arma::colvec exp_neg1 = arma::exp(-logtheta1);
+  arma::colvec exp_neg2 = arma::exp(-logtheta2);
+  
+  arma::colvec denom1 = arma::square((riskset1 - I2) % exp_neg1 + I2);
+  arma::colvec denom2 = arma::square((riskset2 - I4) % exp_neg2 + I4);
+  
+  const double eps = 1e-12;
+  denom1.elem(find(denom1 < eps)).fill(eps);
+  denom2.elem(find(denom2 < eps)).fill(eps);
+  
+  common1 = -delta1 % I1 % I2 % (riskset1 - I2) % exp_neg1 / denom1;
+  common2 = -delta2 % I3 % I4 % (riskset2 - I4) % exp_neg2 / denom2;
+  
+  if(arma::all(common1 == 0) && arma::all(common2 == 0)) 
+    return result; 
+  
+  // if (arma::any(denom1 == 0))
+  //   Rcpp::stop("Zero denominator in common1");
+  // 
+  // if (common1.has_nan())
+  //   Rcpp::stop("NaN in common1");
+    
+  arma::mat deriv_mat(K,K), deriv_mat_t(K,K), deriv_mat_l(K,K), deriv_mat_l_t(K,K);
+  arma::colvec deriv1m, deriv2m, deriv1l, deriv2l;
+  // 
+  // arma::colvec deriv1m(deriv_mat_t.memptr(), deriv_mat_t.n_elem, false, true);
+  // arma::colvec deriv2m(deriv_mat.memptr(), deriv_mat.n_elem, false, true);
+  // arma::colvec deriv1l(deriv_mat_l_t.memptr(), deriv_mat_l_t.n_elem, false, true);
+  // arma::colvec deriv2l(deriv_mat_l.memptr(), deriv_mat_l.n_elem, false, true);
+  
+  
+
+  for (int m = 0; m < totalparam; m++) {
+
+    int idx1m = m % dim;
+    int idx2m = m / dim;
+    
+    deriv_mat = arma::kron(X1.col(idx1m), X2.col(idx2m).as_row());
+    deriv_mat_t = deriv_mat.t();
+    
+    deriv2m = arma::vectorise(deriv_mat);
+    deriv1m = arma::vectorise(deriv_mat_t);
+    
+    if (idxN1.max() >= deriv1m.n_elem)
+      Rcpp::stop("idxN1 out of bounds");
+    
+    if (idxN2.max() >= deriv2m.n_elem)
+      Rcpp::stop("idxN2 out of bounds");
+
+    for (int l = m; l < totalparam; l++) {
+
+      int idx1l = l % dim;
+      int idx2l = l / dim;
+
+      deriv_mat_l = arma::kron(X1.col(idx1l), X2.col(idx2l).as_row());
+      deriv_mat_l_t = deriv_mat_l.t();
+      
+      deriv2l = arma::vectorise(deriv_mat_l);
+      deriv1l = arma::vectorise(deriv_mat_l_t);
+      
+      if (!deriv1m.is_finite() || !deriv1l.is_finite())
+        Rcpp::stop("Non-finite derivative vectors");
+
+      double sum1 = accu(common1 % deriv1m.elem(idxN1) % deriv1l.elem(idxN1));
+      double sum2 = accu(common2 % deriv2m.elem(idxN2) % deriv2l.elem(idxN2));
+
+      result(l,m) = -sum1-sum2;
+
+    }
+  }
+
+  return arma::symmatl(result);
+
+}

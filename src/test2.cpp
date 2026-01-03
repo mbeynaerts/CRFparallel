@@ -7,6 +7,57 @@ using namespace RcppParallel;
 // [[Rcpp::depends(RcppArmadillo)]]
 // [[Rcpp::depends(RcppParallel)]]
 
+
+
+struct DataInput {
+  
+  // vectors
+  const arma::colvec riskset1;
+  const arma::colvec riskset2;
+  const arma::colvec delta1;
+  const arma::colvec delta2;
+  const arma::colvec I1;
+  const arma::colvec I2;
+  const arma::colvec I3;
+  const arma::colvec I4;
+  const arma::colvec I5;
+  const arma::colvec I6;
+  
+  // indices
+  const arma::uvec idxN1;
+  const arma::uvec idxN2;
+
+  // constructor from List
+  explicit DataInput(const Rcpp::List& lst)
+    : riskset1(lst["riskset1"]),
+      riskset2(lst["riskset2"]),
+      delta1(lst["delta1"]),
+      delta2(lst["delta2"]),
+      I1(lst["I1"]),
+      I2(lst["I2"]),
+      I3(lst["I3"]),
+      I4(lst["I4"]),
+      I5(lst["I5"]),
+      I6(lst["I6"]),
+      idxN1(lst["idxN1"]),
+      idxN2(lst["idxN2"]) {}
+  
+  // Getter functions
+  inline const arma::colvec& get_riskset1() const { return riskset1; }
+  inline const arma::colvec& get_riskset2() const { return riskset2; }
+  inline const arma::colvec& get_I1() const { return I1; }
+  inline const arma::colvec& get_I2() const { return I2; }
+  inline const arma::colvec& get_I3() const { return I3; }
+  inline const arma::colvec& get_I4() const { return I4; }
+  inline const arma::colvec& get_I5() const { return I5; }
+  inline const arma::colvec& get_I6() const { return I6; }
+  inline const arma::colvec&  get_delta1() const { return delta1; }
+  inline const arma::colvec&  get_delta2() const { return delta2; }
+  inline const arma::uvec&  get_idxN1() const { return idxN1; }
+  inline const arma::uvec&  get_idxN2() const { return idxN2; }
+  
+  };
+
 // Thanks chatGPT!!
 struct Fenwick {
   std::vector<int> tree;
@@ -33,10 +84,10 @@ struct riskset_worker : public RcppParallel::Worker {
   RMatrix<int> N;
   std::size_t n;
 
-  riskset_worker(NumericVector x,
+  riskset_worker(NumericVector& x,
                  const std::vector<std::size_t>& y_rank,
                  const std::vector<std::size_t>& x_ord,
-                 IntegerMatrix N)
+                 IntegerMatrix& N)
     : x(x), y_rank(y_rank), x_ord(x_ord), N(N), n(x.size()) {}
 
   void operator() (std::size_t begin, std::size_t end) {
@@ -60,113 +111,78 @@ struct riskset_worker : public RcppParallel::Worker {
   }
 };
 
-
-struct HessianWorker : public Worker {
-  
+struct HessianWorker : public RcppParallel::Worker {
+  const arma::uvec& indices;
+  const arma::colvec& weights;
   const arma::mat& X1;
   const arma::mat& X2;
-  const arma::uvec& idxN1;
-  const arma::uvec& idxN2;
-  
-  arma::mat& D1;
-  arma::mat& D2;
-
   int dim;
-  int nrow1;
-  int nrow2;
-
-  HessianWorker(const arma::mat& X1_,
-              const arma::mat& X2_,
-              const arma::uvec& idxN1_,
-              const arma::uvec& idxN2_,
-              arma::mat& D1_,
-              arma::mat& D2_)
-    : X1(X1_), X2(X2_),
-      idxN1(idxN1_), idxN2(idxN2_),
-      D1(D1_), D2(D2_) {
+  int n1;
+  int n2;
+  bool is_type_1;
+  int batch_size;
   
-    dim   = X1.n_cols;
-    nrow1 = X1.n_rows;
-    nrow2 = X2.n_rows;
+  // Output: each thread has its own local Hessian to avoid race conditions
+  arma::mat local_H;
+  
+  HessianWorker(const arma::uvec& indices, const arma::colvec& weights,
+                const arma::mat& X1, const arma::mat& X2, 
+                int dim, bool is_type_1, int batch_size)
+    : indices(indices), weights(weights), X1(X1), X2(X2),
+      dim(dim), is_type_1(is_type_1), batch_size(batch_size) {
+    n1 = X1.n_rows;
+    n2 = X2.n_rows;
+    local_H.zeros(dim * dim, dim * dim);
   }
-
-  inline void fill_deriv(arma::colvec& out,
-                         const arma::colvec& a,
-                         const arma::colvec& b,
-                         const arma::uvec& idx,
-                         bool transpose) {
   
-    for (arma::uword k = 0; k < idx.n_elem; ++k) {
-      arma::uword pos = idx[k];
-      arma::uword r, c;
+  // Overload for splitting the work
+  HessianWorker(const HessianWorker& other, RcppParallel::Split)
+    : indices(other.indices), weights(other.weights), X1(other.X1), X2(other.X2),
+      dim(other.dim), n1(other.n1), n2(other.n2), 
+      is_type_1(other.is_type_1), batch_size(other.batch_size) {
+    local_H.zeros(dim * dim, dim * dim);
+  }
+  
+  void operator()(std::size_t begin, std::size_t end) {
+    int totalparam = dim * dim;
     
-      if (transpose) {
-        r = pos % nrow2;
-        c = pos / nrow2;
-        out[k] = a[c] * b[r];
-      } else {
-        r = pos % nrow1;
-        c = pos / nrow1;
-        out[k] = a[r] * b[c];
+    for (std::size_t b = begin; b < end; b += batch_size) {
+      int current_batch = std::min((int)batch_size, (int)(end - b));
+      arma::mat D_sub(current_batch, totalparam);
+      
+      for (int k = 0; k < current_batch; ++k) {
+        arma::uword idx = indices(b + k);
+        arma::uword row_i, row_j;
+        
+        if (is_type_1) { // Row-major (Original D1)
+          row_i = idx / n2;
+          row_j = idx % n2;
+        } else {         // Col-major (Original D2)
+          row_i = idx % n1;
+          row_j = idx / n1;
+        }
+        
+        // Vectorized row fill
+        arma::rowvec r1 = X1.row(row_i);
+        arma::rowvec r2 = X2.row(row_j);
+        D_sub.row(k) = arma::vectorise(r1.t() * r2).t();
       }
+      
+      arma::colvec w_sub = weights.subvec(b, b + current_batch - 1);
+      local_H -= (D_sub.each_col() % w_sub).t() * D_sub;
     }
   }
-
-  void operator()(std::size_t begin, std::size_t end) {
-    arma::colvec tmp1(idxN1.n_elem);
-    arma::colvec tmp2(idxN2.n_elem);
   
-    for (std::size_t m = begin; m < end; ++m) {
-      int i = m % dim;
-      int j = m / dim;
-    
-      fill_deriv(tmp1, X1.col(i), X2.col(j), idxN1, true);
-      fill_deriv(tmp2, X1.col(i), X2.col(j), idxN2, false);
-    
-      D1.col(m) = tmp1;
-      D2.col(m) = tmp2;
-     }
+  // Join the results of two threads
+  void join(const HessianWorker& other) {
+    local_H += other.local_H;
   }
 };
 
 
 
-// Slow parallel implementation
-// struct riskset : public Worker {
-//   
-//   // Input
-//   RVector<double> x;
-//   RVector<double> y;
-//   std::size_t n;
-//   
-//   // Output
-//   RMatrix<int> N;
-//   
-//   // Helper function
-//   int Ind2(const double &a, const double &b) {
-//     int sum = 0;
-//     for (std::size_t i=0; i<n; i++) {
-//       if (x[i] >= a and y[i] >= b) {
-//         sum++;
-//       }
-//     }
-//     return sum;
-//   }
-//   
-//   // Worker
-//   riskset(const NumericVector x, const NumericVector y, IntegerMatrix N)
-//     : x(x), y(y), n(x.size()), N(N) {}
-//   
-//   // Parallel loop
-//   void operator() (std::size_t begin, std::size_t end) {
-//     for (std::size_t j=begin; j<end; j++) {
-//       for (std::size_t i=0; i<n; i++) {
-//         N(j,i) = Ind2(x[j], y[i]);
-//       }
-//     }
-//   }
-//   
-// };
+
+
 
 // [[Rcpp::export]]
 arma::mat row_kron(const arma::mat& X, const arma::mat& Y) {
@@ -187,7 +203,7 @@ arma::mat row_kron(const arma::mat& X, const arma::mat& Y) {
 }
 
 // [[Rcpp::export]]
-IntegerMatrix IndGreater(NumericVector &x) {
+IntegerMatrix indgreater(NumericVector &x) {
   int n = x.size();
   IntegerMatrix elem(n);
   for (int j=0; j<n; j++) {
@@ -203,7 +219,7 @@ IntegerMatrix IndGreater(NumericVector &x) {
 }
 
 // [[Rcpp::export]]
-IntegerMatrix IndLess(NumericVector &x) {
+IntegerMatrix indless(NumericVector &x) {
   int n = x.size();
   IntegerMatrix elem(n);
   for (int j=0; j<n; j++) {
@@ -219,7 +235,7 @@ IntegerMatrix IndLess(NumericVector &x) {
 }
 
 // [[Rcpp::export]]
-IntegerMatrix IndEqual(NumericVector &x) {
+IntegerMatrix indequal(NumericVector &x) {
   int n = x.size();
   IntegerMatrix elem(n);
   for (int j=0; j<n; j++) {
@@ -253,7 +269,7 @@ IntegerMatrix IndEqual(NumericVector &x) {
 IntegerMatrix riskset_fast(NumericVector x, NumericVector y) {
   
   std::size_t n = x.size();
-  IntegerMatrix N(n, n);
+  IntegerMatrix N(n);
 
   // y ranks
   std::vector<std::size_t> y_ord(n);
@@ -279,7 +295,7 @@ IntegerMatrix riskset_fast(NumericVector x, NumericVector y) {
 }
 
 // [[Rcpp::export]]
-IntegerMatrix DeltaC(NumericVector &x, NumericVector &y) {
+IntegerMatrix delta(NumericVector &x, NumericVector &y) {
   int n = x.size();
   IntegerMatrix delta(n);
   for (int j=0; j<n; j++) {
@@ -291,84 +307,96 @@ IntegerMatrix DeltaC(NumericVector &x, NumericVector &y) {
 }
 
 
-
 // [[Rcpp::export]]
-double logLikC(const NumericVector &riskset1,
-               const NumericVector &riskset2,
-               const NumericVector &logtheta1,
-               const NumericVector &logtheta2,
-               const NumericVector &delta1,
-               const NumericVector &delta2,
-               const NumericVector &I1,
-               const NumericVector &I2,
-               const NumericVector &I3,
-               const NumericVector &I4,
-               const NumericVector &I5,
-               const NumericVector &I6) {
+double loglikC(arma::colvec& x,
+               const Rcpp::List& datalist,
+               const arma::mat& X1,
+               const arma::mat& X2) {
 
-  double sum1;
-  double sum2;
+  int dim = X1.n_cols;
+  
+  DataInput input(datalist);
+  
+  const arma::colvec& riskset1 = input.get_riskset1();
+  const arma::colvec& riskset2 = input.get_riskset2();
+  const arma::colvec& delta1 = input.get_delta1();
+  const arma::colvec& delta2 = input.get_delta2();
+  const arma::colvec& I1 = input.get_I1();
+  const arma::colvec& I2 = input.get_I2();
+  const arma::colvec& I3 = input.get_I3();
+  const arma::colvec& I4 = input.get_I4();
+  const arma::colvec& I5 = input.get_I5();
+  const arma::colvec& I6 = input.get_I6();
+  const arma::uvec& idxN1 = input.get_idxN1();
+  const arma::uvec& idxN2 = input.get_idxN2();
+  
+  // Calculation of logtheta
+  arma::mat coefmat(x.memptr(), dim, dim, false, true);
+  arma::mat logtheta = X1 * coefmat * X2.t();
+  arma::colvec logtheta2 = arma::vectorise(logtheta);
+  arma::colvec logtheta1 = arma::vectorise(logtheta.t());
 
-  sum1 = Rcpp::sum(delta1*I1*(logtheta1*I5 - Rcpp::log(riskset1 + I2*Rcpp::exp(logtheta1) - I2)));
-  sum2 = Rcpp::sum(delta2*I3*(logtheta2*I6 - Rcpp::log(riskset2 + I4*Rcpp::exp(logtheta2) - I4)));
+  double sum1 = arma::accu(delta1 % I1 % (logtheta1.elem(idxN1) % I5 - arma::log(riskset1 + I2 % arma::exp(logtheta1.elem(idxN1)) - I2)));
+  double sum2 = arma::accu(delta2 % I3 % (logtheta2.elem(idxN2) % I6 - arma::log(riskset2 + I4 % arma::exp(logtheta2.elem(idxN2)) - I4)));
 
   return(-sum1-sum2);
 }
 
+
 // [[Rcpp::export]]
-NumericVector gradientNew(const arma::colvec &riskset1,
-                          const arma::colvec &riskset2,
-                          const arma::colvec &logtheta1,
-                          const arma::colvec &logtheta2,
-                          const arma::colvec &delta1,
-                          const arma::colvec &delta2,
-                          const arma::colvec &I1,
-                          const arma::colvec &I2,
-                          const arma::colvec &I3,
-                          const arma::colvec &I4,
-                          const arma::colvec &I5,
-                          const arma::colvec &I6,
-                          const arma::mat &X1,
-                          const arma::mat &X2,
-                          const arma::uvec &idxN1,
-                          const arma::uvec &idxN2) {
-
-  int K = X1.n_rows;
-  int n = riskset1.size();
+arma::vec gradient_fast(arma::colvec& x,
+                            const Rcpp::List& datalist,
+                            const arma::mat &X1,
+                            const arma::mat &X2) {
+  
   int dim = X1.n_cols;
-  int totalparam = pow(dim, 2);
-  NumericVector result(totalparam);
-  arma::colvec common1(n);
-  arma::colvec common2(n);
+  int K = X1.n_rows;
+  DataInput input(datalist); // Assuming this is your custom class
   
-  arma::vec exp_neg1 = arma::exp(-logtheta1);
-  arma::vec exp_neg2 = arma::exp(-logtheta2);
+  // 1. Map x to a matrix without copying
+  arma::mat coefmat(x.memptr(), dim, dim, false, true);
   
-  common1 = delta1 % I1 % ( I5 - I2 / ( (riskset1 - I2) % exp_neg1 + I2 ) );
-  common2 = delta2 % I3 % ( I6 - I4 / ( (riskset2 - I4) % exp_neg2 + I4 ) );
+  // 2. Calculate logtheta
+  // logtheta(i, j) = X1.row(i) * coefmat * X2.row(j).t()
+  arma::mat logtheta = X1 * coefmat * X2.t();
+  arma::colvec logtheta2(logtheta.memptr(), logtheta.n_elem, false, true);
+  arma::colvec logtheta1 = vectorise(logtheta.t());
 
-  arma::mat deriv_mat(K,K);
-  arma::mat deriv_mat_t(K,K);
-  arma::colvec deriv1(deriv_mat_t.memptr(), deriv_mat_t.n_elem, false, true);
-  arma::colvec deriv2(deriv_mat.memptr(), deriv_mat.n_elem, false, true);
-
-  for (int m=0; m<totalparam; m++) {
-
-    int idx1 = m % dim;
-    int idx2 = m / dim;
-
-    deriv_mat = arma::kron(X1.col(idx1), X2.col(idx2).as_row());
-    deriv_mat_t = deriv_mat.t();
-
-    double sum1 = arma::accu(common1 % deriv1.elem(idxN1));
-    double sum2 = arma::accu(common2 % deriv2.elem(idxN2));
-
-    result(m) = -sum1-sum2;
-
-  }
-
-  return(result);
-
+  // 3. Compute common components efficiently
+  // Instead of vectorising everything, we compute the weights into matrix form
+  arma::mat W1 = arma::zeros<arma::mat>(K, K);
+  arma::mat W2 = arma::zeros<arma::mat>(K, K);
+  
+  // Pre-extract indices and vectors to avoid repeated get calls
+  const arma::uvec& idxN1 = input.get_idxN1();
+  const arma::uvec& idxN2 = input.get_idxN2();
+  const arma::colvec& riskset1 = input.get_riskset1();
+  const arma::colvec& riskset2 = input.get_riskset2();
+  const arma::colvec& delta1 = input.get_delta1();
+  const arma::colvec& delta2 = input.get_delta2();
+  const arma::colvec& I1 = input.get_I1();
+  const arma::colvec& I2 = input.get_I2();
+  const arma::colvec& I3 = input.get_I3();
+  const arma::colvec& I4 = input.get_I4();
+  const arma::colvec& I5 = input.get_I5();
+  const arma::colvec& I6 = input.get_I6();
+  
+  // Vectorized weight calculation (subsetting only what's needed)
+  arma::vec v_common1 = delta1 % I1 % (I5 - I2 / ((riskset1 - I2) % arma::exp(-logtheta1.elem(idxN1)) + I2));
+  arma::vec v_common2 = delta2 % I3 % (I6 - I4 / ((riskset2 - I4) % arma::exp(-logtheta2.elem(idxN2)) + I4));
+  
+  // Map weights back to KxK structure
+  W1.elem(idxN1) = v_common1; // W1 corresponds to the transposed logic in your code
+  W2.elem(idxN2) = v_common2;
+  
+  // 4. The "Magic" Step: Replace the loop with Matrix Multiplications
+  // The sum of (common * kron) is equivalent to X1.T * WeightMatrix * X2
+  // We handle the indices by using the sparse-like weight matrices W1 and W2
+  
+  arma::mat grad_mat = -(X1.t() * W1.t() * X2) - (X1.t() * W2 * X2);
+  
+  // 5. Return as a vector
+  return arma::vectorise(grad_mat);
 }
 
 // [[Rcpp::export]]
@@ -423,128 +451,39 @@ NumericVector gradientPoly(const NumericVector &riskset1,
 
 }
 
-// [[Rcpp::export]]
-arma::mat hessianNew(const arma::colvec& riskset1,
-                     const arma::colvec &riskset2,
-                     const arma::colvec &logtheta1,
-                     const arma::colvec &logtheta2,
-                     const arma::colvec &delta1,
-                     const arma::colvec &delta2,
-                     const arma::colvec &I1,
-                     const arma::colvec &I2,
-                     const arma::colvec &I3,
-                     const arma::colvec &I4,
-                     const arma::mat& X1,
-                     const arma::mat& X2,
-                     const arma::uvec& idxN1,
-                     const arma::uvec& idxN2) {
-
-  int K = X1.n_rows;
-  int n = riskset1.n_rows;
-  int dim = X1.n_cols;
-  int totalparam = dim*dim;
-  arma::colvec common1(n);
-  arma::colvec common2(n);
-
-  arma::mat result(totalparam, totalparam, arma::fill::zeros);
-  
-  arma::colvec exp_neg1 = arma::exp(-logtheta1);
-  arma::colvec exp_neg2 = arma::exp(-logtheta2);
-  
-  arma::colvec denom1 = arma::square((riskset1 - I2) % exp_neg1 + I2);
-  arma::colvec denom2 = arma::square((riskset2 - I4) % exp_neg2 + I4);
-  
-  const double eps = 1e-12;
-  denom1.elem(find(denom1 < eps)).fill(eps);
-  denom2.elem(find(denom2 < eps)).fill(eps);
-  
-  common1 = -delta1 % I1 % I2 % (riskset1 - I2) % exp_neg1 / denom1;
-  common2 = -delta2 % I3 % I4 % (riskset2 - I4) % exp_neg2 / denom2;
-  
-  if(arma::all(common1 == 0) && arma::all(common2 == 0)) 
-    return result; 
-  
-  // if (arma::any(denom1 == 0))
-  //   Rcpp::stop("Zero denominator in common1");
-  // 
-  // if (common1.has_nan())
-  //   Rcpp::stop("NaN in common1");
-    
-  arma::mat deriv_mat(K,K), deriv_mat_t(K,K), deriv_mat_l(K,K), deriv_mat_l_t(K,K);
-  arma::colvec deriv1m, deriv2m, deriv1l, deriv2l;
-  // 
-  // arma::colvec deriv1m(deriv_mat_t.memptr(), deriv_mat_t.n_elem, false, true);
-  // arma::colvec deriv2m(deriv_mat.memptr(), deriv_mat.n_elem, false, true);
-  // arma::colvec deriv1l(deriv_mat_l_t.memptr(), deriv_mat_l_t.n_elem, false, true);
-  // arma::colvec deriv2l(deriv_mat_l.memptr(), deriv_mat_l.n_elem, false, true);
-  
-  
-
-  for (int m = 0; m < totalparam; m++) {
-
-    int idx1m = m % dim;
-    int idx2m = m / dim;
-    
-    deriv_mat = arma::kron(X1.col(idx1m), X2.col(idx2m).as_row());
-    deriv_mat_t = deriv_mat.t();
-    
-    deriv2m = arma::vectorise(deriv_mat);
-    deriv1m = arma::vectorise(deriv_mat_t);
-    
-    if (idxN1.max() >= deriv1m.n_elem)
-      Rcpp::stop("idxN1 out of bounds");
-    
-    if (idxN2.max() >= deriv2m.n_elem)
-      Rcpp::stop("idxN2 out of bounds");
-
-    for (int l = m; l < totalparam; l++) {
-
-      int idx1l = l % dim;
-      int idx2l = l / dim;
-
-      deriv_mat_l = arma::kron(X1.col(idx1l), X2.col(idx2l).as_row());
-      deriv_mat_l_t = deriv_mat_l.t();
-      
-      deriv2l = arma::vectorise(deriv_mat_l);
-      deriv1l = arma::vectorise(deriv_mat_l_t);
-      
-      if (!deriv1m.is_finite() || !deriv1l.is_finite())
-        Rcpp::stop("Non-finite derivative vectors");
-
-      double sum1 = accu(common1 % deriv1m.elem(idxN1) % deriv1l.elem(idxN1));
-      double sum2 = accu(common2 % deriv2m.elem(idxN2) % deriv2l.elem(idxN2));
-
-      result(l,m) = -sum1-sum2;
-
-    }
-  }
-
-  return arma::symmatl(result);
-
-}
 
 // [[Rcpp::export]]
 arma::mat hessian_fast(
-    const arma::colvec& riskset1,
-    const arma::colvec& riskset2,
-    const arma::colvec& logtheta1,
-    const arma::colvec& logtheta2,
-    const arma::colvec& delta1,
-    const arma::colvec& delta2,
-    const arma::colvec& I1,
-    const arma::colvec& I2,
-    const arma::colvec& I3,
-    const arma::colvec& I4,
+    arma::colvec& x, // Cannot be constant due to advanced constructor on coefmat
+    const Rcpp::List& datalist,
     const arma::mat& X1,
-    const arma::mat& X2,
-    const arma::uvec& idxN1,
-    const arma::uvec& idxN2) {
+    const arma::mat& X2) {
+  
+  DataInput input(datalist);
+  
+  const arma::colvec& riskset1 = input.get_riskset1();
+  const arma::colvec& riskset2 = input.get_riskset2();
+  const arma::colvec& delta1 = input.get_delta1();
+  const arma::colvec& delta2 = input.get_delta2();
+  const arma::colvec& I1 = input.get_I1();
+  const arma::colvec& I2 = input.get_I2();
+  const arma::colvec& I3 = input.get_I3();
+  const arma::colvec& I4 = input.get_I4();
+  const arma::uvec& idxN1 = input.get_idxN1();
+  const arma::uvec& idxN2 = input.get_idxN2();
   
   int dim = X1.n_cols;
   int totalparam = dim * dim;
+  
+  // Calculate logtheta
+  arma::mat coefmat(x.memptr(), dim, dim, false, true);
+  arma::mat logtheta = X1 * coefmat * X2.t();
+  arma::colvec logtheta2 = arma::vectorise(logtheta);
+  arma::colvec logtheta1 = arma::vectorise(logtheta.t());
 
-  arma::colvec exp_neg1 = arma::exp(-logtheta1);
-  arma::colvec exp_neg2 = arma::exp(-logtheta2);
+  // Calculate common part of hessian
+  arma::colvec exp_neg1 = arma::exp(-logtheta1.elem(idxN1));
+  arma::colvec exp_neg2 = arma::exp(-logtheta2.elem(idxN2));
 
   arma::colvec denom1 = arma::square((riskset1 - I2) % exp_neg1 + I2);
   arma::colvec denom2 = arma::square((riskset2 - I4) % exp_neg2 + I4);
@@ -590,9 +529,239 @@ arma::mat hessian_fast(
     arma::mat H = - (D1.each_col() % common1).t() * D1 - (D2.each_col() % common2).t() * D2;
     
       
-      return arma::symmatl(H);
+      return H;
 }
 
+
+// Memory efficient Hessian calculation
+// [[Rcpp::export]]
+arma::mat hessian_fast_efficient(
+    arma::colvec& x, 
+    const Rcpp::List& datalist,
+    const arma::mat& X1,
+    const arma::mat& X2) {
+  
+  DataInput input(datalist);
+  
+  const arma::colvec& riskset1 = input.get_riskset1();
+  const arma::colvec& riskset2 = input.get_riskset2();
+  const arma::colvec& delta1   = input.get_delta1();
+  const arma::colvec& delta2   = input.get_delta2();
+  const arma::colvec& I1       = input.get_I1();
+  const arma::colvec& I2       = input.get_I2();
+  const arma::colvec& I3       = input.get_I3();
+  const arma::colvec& I4       = input.get_I4();
+  const arma::uvec& idxN1      = input.get_idxN1();
+  const arma::uvec& idxN2      = input.get_idxN2();
+  
+  int dim = X1.n_cols;
+  int totalparam = dim * dim;
+  
+  // 1. Calculate logtheta with zero-copy view
+  arma::mat coefmat(x.memptr(), dim, dim, false, true);
+  arma::mat logtheta = X1 * coefmat * X2.t();
+  
+  // 2. Common weights (vectorise(..., 0) ensures no copy if possible)
+  arma::colvec logtheta2 = arma::vectorise(logtheta);
+  arma::colvec logtheta1 = arma::vectorise(logtheta.t());
+  
+  arma::colvec exp_neg1 = arma::exp(-logtheta1.elem(idxN1));
+  arma::colvec exp_neg2 = arma::exp(-logtheta2.elem(idxN2));
+
+  arma::colvec denom1 = arma::square((riskset1 - I2) % exp_neg1 + I2);
+  arma::colvec denom2 = arma::square((riskset2 - I4) % exp_neg2 + I4);
+
+  const double eps = 1e-12;
+  denom1.transform([&](double v){ return std::max(v, eps); });
+  denom2.transform([&](double v){ return std::max(v, eps); });
+
+  arma::colvec common1 = -delta1 % I1 % I2 % (riskset1 - I2) % exp_neg1 / denom1;
+  arma::colvec common2 = -delta2 % I3 % I4 % (riskset2 - I4) % exp_neg2 / denom2;
+
+  // Pre-allocate Hessian
+  arma::mat H(totalparam, totalparam, arma::fill::zeros);
+  
+  // We need to build D1 and D2 to perform the final H calculation.
+  // To stay memory efficient, we build D1/D2 column by column.
+  // This avoids the massive memory spike of 'arma::kron' matrices.
+  
+  arma::mat D1(idxN1.n_elem, totalparam);
+  arma::mat D2(idxN2.n_elem, totalparam);
+
+  for (int m = 0; m < totalparam; ++m) {
+    int i = m % dim; // Column of X1
+    int j = m / dim; // Column of X2
+  
+    // Original: d2 = vectorise(X1.col(i) * X2.col(j).t())
+    // This is an outer product. 
+    // Element (r1, r2) of the outer product is X1(r1, i) * X2(r2, j)
+    
+    // For D2 (Col-major vectorization of outer product):
+    // The index k in the vectorized vector corresponds to:
+    // row_i = k % n1, row_j = k / n1
+    for (arma::uword k = 0; k < idxN2.n_elem; ++k) {
+      arma::uword idx = idxN2(k);
+      D2(k, m) = X1(idx % X1.n_rows, i) * X2(idx / X1.n_rows, j);
+    }
+  
+    // For D1 (Vectorization of the TRANSPOSE of the outer product):
+    // This is equivalent to Row-major vectorization of the original outer product.
+    // row_i = idx / n2, row_j = idx % n2
+    for (arma::uword k = 0; k < idxN1.n_elem; ++k) {
+      arma::uword idx = idxN1(k);
+      D1(k, m) = X1(idx / X2.n_rows, i) * X2(idx % X2.n_rows, j);
+    }
+  }
+  
+  H = - (D1.each_col() % common1).t() * D1 - (D2.each_col() % common2).t() * D2;
+
+  return H;
+}
+
+// [[Rcpp::export]]
+arma::mat hessian_fast_batched(
+    arma::colvec& x, 
+    const Rcpp::List& datalist,
+    const arma::mat& X1,
+    const arma::mat& X2,
+    int batch_size = 1000) {
+  
+  DataInput input(datalist);
+  const arma::colvec& riskset1 = input.get_riskset1();
+  const arma::colvec& riskset2 = input.get_riskset2();
+  const arma::colvec& delta1   = input.get_delta1();
+  const arma::colvec& delta2   = input.get_delta2();
+  const arma::colvec& I1       = input.get_I1();
+  const arma::colvec& I2       = input.get_I2();
+  const arma::colvec& I3       = input.get_I3();
+  const arma::colvec& I4       = input.get_I4();
+  const arma::uvec& idxN1      = input.get_idxN1();
+  const arma::uvec& idxN2      = input.get_idxN2();
+  
+  int dim = X1.n_cols;
+  int totalparam = dim * dim;
+  int n1 = X1.n_rows;
+  int n2 = X2.n_rows;
+  
+  // 1. Calculate common weights (as before)
+  arma::mat coefmat(x.memptr(), dim, dim, false, true);
+  arma::mat logtheta = X1 * coefmat * X2.t();
+  
+  arma::colvec logtheta1 = arma::vectorise(logtheta.t());
+  arma::colvec logtheta2 = arma::vectorise(logtheta);
+  
+  arma::colvec exp_neg1 = arma::exp(-logtheta1.elem(idxN1));
+  arma::colvec exp_neg2 = arma::exp(-logtheta2.elem(idxN2));
+  
+  arma::colvec denom1 = arma::square((riskset1 - I2) % exp_neg1 + I2);
+  arma::colvec denom2 = arma::square((riskset2 - I4) % exp_neg2 + I4);
+  
+  const double eps = 1e-12;
+  denom1.transform([&](double v){ return std::max(v, eps); });
+  denom2.transform([&](double v){ return std::max(v, eps); });
+
+  arma::colvec common1 = -delta1 % I1 % I2 % (riskset1 - I2) % exp_neg1 / denom1;
+  arma::colvec common2 = -delta2 % I3 % I4 % (riskset2 - I4) % exp_neg2 / denom2;
+
+  arma::mat H = arma::zeros<arma::mat>(totalparam, totalparam);
+
+  // --- Process D1 Batches (Row-major vectorization of K) ---
+  int n_idx1 = idxN1.n_elem;
+  for (int b = 0; b < n_idx1; b += batch_size) {
+    int current_batch = std::min(batch_size, n_idx1 - b);
+    arma::mat D1_sub(current_batch, totalparam);
+    
+    for (int k = 0; k < current_batch; ++k) {
+      arma::uword idx = idxN1(b + k);
+      arma::uword row_i = idx / n2;
+      arma::uword row_j = idx % n2;
+      
+      // Fill the row of D1_sub corresponding to the m parameters
+      for (int m = 0; m < totalparam; ++m) {
+        D1_sub(k, m) = X1(row_i, m % dim) * X2(row_j, m / dim);
+      }
+    }
+  
+    arma::colvec w_sub = common1.subvec(b, b + current_batch - 1);
+    
+    // H -= D1_sub.T * diag(w_sub) * D1_sub
+    H -= (D1_sub.each_col() % w_sub).t() * D1_sub;
+  }
+
+  // --- Process D2 Batches (Col-major vectorization of K) ---
+  int n_idx2 = idxN2.n_elem;
+  for (int b = 0; b < n_idx2; b += batch_size) {
+    int current_batch = std::min(batch_size, n_idx2 - b);
+    arma::mat D2_sub(current_batch, totalparam);
+  
+    for (int k = 0; k < current_batch; ++k) {
+      arma::uword idx = idxN2(b + k);
+      arma::uword row_i = idx % n1;
+      arma::uword row_j = idx / n1;
+    
+      for (int m = 0; m < totalparam; ++m) {
+        D2_sub(k, m) = X1(row_i, m % dim) * X2(row_j, m / dim);
+      }
+    }
+  
+    arma::colvec w_sub = common2.subvec(b, b + current_batch - 1);
+    H -= (D2_sub.each_col() % w_sub).t() * D2_sub;
+  }
+  return H;
+}
+
+// [[Rcpp::export]]
+arma::mat hessian_fast_batched_parallel(
+    arma::colvec& x, 
+    const Rcpp::List& datalist,
+    const arma::mat& X1,
+    const arma::mat& X2,
+    int batch_size = 1000) {
+  
+  DataInput input(datalist);
+  const arma::colvec& riskset1 = input.get_riskset1();
+  const arma::colvec& riskset2 = input.get_riskset2();
+  const arma::colvec& delta1   = input.get_delta1();
+  const arma::colvec& delta2   = input.get_delta2();
+  const arma::colvec& I1       = input.get_I1();
+  const arma::colvec& I2       = input.get_I2();
+  const arma::colvec& I3       = input.get_I3();
+  const arma::colvec& I4       = input.get_I4();
+  const arma::uvec& idxN1      = input.get_idxN1();
+  const arma::uvec& idxN2      = input.get_idxN2();
+  
+  int dim = X1.n_cols;
+
+  // 1. Calculate common weights (as before)
+  arma::mat coefmat(x.memptr(), dim, dim, false, true);
+  arma::mat logtheta = X1 * coefmat * X2.t();
+  
+  arma::colvec logtheta1 = arma::vectorise(logtheta.t());
+  arma::colvec logtheta2 = arma::vectorise(logtheta);
+  
+  arma::colvec exp_neg1 = arma::exp(-logtheta1.elem(idxN1));
+  arma::colvec exp_neg2 = arma::exp(-logtheta2.elem(idxN2));
+  
+  arma::colvec denom1 = arma::square((riskset1 - I2) % exp_neg1 + I2);
+  arma::colvec denom2 = arma::square((riskset2 - I4) % exp_neg2 + I4);
+  
+  const double eps = 1e-12;
+  denom1.transform([&](double v){ return std::max(v, eps); });
+  denom2.transform([&](double v){ return std::max(v, eps); });
+  
+  arma::colvec common1 = -delta1 % I1 % I2 % (riskset1 - I2) % exp_neg1 / denom1;
+  arma::colvec common2 = -delta2 % I3 % I4 % (riskset2 - I4) % exp_neg2 / denom2;
+
+  HessianWorker worker1(idxN1, common1, X1, X2, dim, true, batch_size);
+  RcppParallel::parallelReduce(0, idxN1.n_elem, worker1);
+  
+  HessianWorker worker2(idxN2, common2, X1, X2, dim, false, batch_size);
+  RcppParallel::parallelReduce(0, idxN2.n_elem, worker2);
+  
+  arma::mat H = worker1.local_H + worker2.local_H;
+  
+  return H;
+}
 
 // [[Rcpp::export]]
 NumericMatrix hessianPolyC(const NumericVector &riskset1,
@@ -646,20 +815,3 @@ NumericMatrix hessianPolyC(const NumericVector &riskset1,
   return(result);
 
 }
-
-NumericMatrix testfunct(const List &deriv,
-                        const int &df) {
-
-  int totalparam = df*df;
-
-  std::vector<NumericMatrix> deriv_vec(totalparam);
-  for(int k = 0; k < totalparam; ++k) {
-    NumericMatrix deriv_R = deriv[k];
-    /* arma::mat derivMat(deriv_R.begin(), deriv_R.rows(), deriv_R.cols(), false, true);
-    deriv_vec[k] = derivMat; */
-    deriv_vec[k] = deriv_R;
-  }
-  NumericMatrix result = deriv_vec[0];
-  return(result);
-}
-

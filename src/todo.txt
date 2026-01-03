@@ -1,0 +1,180 @@
+
+
+
+struct HessianWorker : public Worker {
+  
+  const arma::mat& X1;
+  const arma::mat& X2;
+  const arma::uvec& idxN1;
+  const arma::uvec& idxN2;
+  
+  arma::mat& D1;
+  arma::mat& D2;
+
+  int dim;
+  int nrow1;
+  int nrow2;
+
+  HessianWorker(const arma::mat& X1_,
+              const arma::mat& X2_,
+              const arma::uvec& idxN1_,
+              const arma::uvec& idxN2_,
+              arma::mat& D1_,
+              arma::mat& D2_)
+    : X1(X1_), X2(X2_),
+      idxN1(idxN1_), idxN2(idxN2_),
+      D1(D1_), D2(D2_) {
+  
+    dim   = X1.n_cols;
+    nrow1 = X1.n_rows;
+    nrow2 = X2.n_rows;
+  }
+
+  inline void fill_deriv(arma::colvec& out,
+                         const arma::colvec& a,
+                         const arma::colvec& b,
+                         const arma::uvec& idx,
+                         bool transpose) {
+  
+    for (arma::uword k = 0; k < idx.n_elem; ++k) {
+      arma::uword pos = idx[k];
+      arma::uword r, c;
+    
+      if (transpose) {
+        r = pos % nrow2;
+        c = pos / nrow2;
+        out[k] = a[c] * b[r];
+      } else {
+        r = pos % nrow1;
+        c = pos / nrow1;
+        out[k] = a[r] * b[c];
+      }
+    }
+  }
+
+  void operator()(std::size_t begin, std::size_t end) {
+    arma::colvec tmp1(idxN1.n_elem);
+    arma::colvec tmp2(idxN2.n_elem);
+  
+    for (std::size_t m = begin; m < end; ++m) {
+      int i = m % dim;
+      int j = m / dim;
+    
+      fill_deriv(tmp1, X1.col(i), X2.col(j), idxN1, true);
+      fill_deriv(tmp2, X1.col(i), X2.col(j), idxN2, false);
+    
+      D1.col(m) = tmp1;
+      D2.col(m) = tmp2;
+     }
+  }
+};
+
+// Backtracking line search (Armijo condition)
+double line_search(
+    const std::function<double(arma::vec&)>& loglik,
+    arma::vec& x,
+    const arma::vec& p,
+    const arma::vec& grad,
+    double alpha = 1.0,
+    double c = 1e-8,
+    double rho = 0.5
+) {
+  double f0 = loglik(x);
+  double slope = arma::dot(grad, p);
+  
+  arma::vec x_new;
+  while (alpha > 1e-8) {
+    x_new = x + alpha * p;
+    // if (loglik(x_new) >= f0 + c * alpha * slope) // Ascent direction for ll
+    if (loglik(x_new) <= f0 + c * alpha * slope) // Descent direction for negative ll
+      break;
+    alpha *= rho;
+  }
+  return alpha;
+  }
+
+
+Rcpp::List newton_root(
+    arma::vec& x0,
+    const Rcpp::List& datalist,
+    const arma::mat& X1,
+    const arma::mat& X2,
+    const arma::mat& Sl,
+    const int max_iter = 100,
+    const double tol = 1e-6,
+    const double ridge = 1e-6
+) {
+  
+  arma::colvec x = x0;
+
+  auto loglik = [&](arma::vec& x) {
+    return loglikC(x, datalist, X1, X2);
+  };
+  
+  auto gradient = [&](arma::vec& x) {
+    return gradient_fast(x, datalist, X1, X2);
+  };
+  
+  auto hessian = [&](arma::vec& x) {
+    return hessian_fast(x, datalist, X1, X2);
+  };
+  
+  int iter;
+  bool converged = false;
+  
+  for (iter = 0; iter < max_iter; ++iter) {
+    
+    arma::vec g = gradient(x) + Sl * x;
+    
+    if (arma::norm(g, 2) < tol) {
+      converged = true;
+      break;
+    }
+    
+    arma::mat H = hessian(x) + Sl;
+
+    // Regularize Hessian to ensure PD
+    // arma::mat Hreg = H;
+    // double lambda = ridge;
+
+    // arma::vec eigval;
+    // arma::mat eigvec;
+
+    // if (!H.is_symmetric()) {
+    //   H = arma::symmatl(H);
+    // }
+    // arma::mat H_copy = arma::symmatl(H);
+    // arma::eig_sym(eigval, eigvec, H_copy);
+    // 
+    // if (eigval.max() > 0) {
+    //   eigval = -arma::abs(eigval);
+    //   H = eigvec * arma::diagmat(eigval) * eigvec.t();
+    // }
+    
+    // Newton direction
+    arma::vec p = arma::solve(H, -g);
+    
+    // // Line search
+    // double alpha = line_search(loglik, x, p, g);
+    // 
+    // if (alpha < 1e-8) {
+    //   // Rcpp::stop("Line search failed to find descent direction.");
+    //   alpha = 1e-4;
+    //   p = -g;
+    //   }
+    // 
+    // x += alpha * p;
+    
+    x += p;
+    
+  }
+
+  arma::mat H = hessian(x) + Sl;
+
+  return Rcpp::List::create(
+    Rcpp::Named("par") = x,
+    Rcpp::Named("hessian") = H,
+    Rcpp::Named("converged") = converged,
+    Rcpp::Named("iterations") = iter
+  );
+}

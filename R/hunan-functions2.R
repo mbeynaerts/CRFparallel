@@ -23,6 +23,24 @@
 #     return(Z)
 #   }
 
+
+set_blas_threads <- function(nthreads = parallel::detectCores()) {
+  blas_name <- extSoftVersion()["BLAS"]
+  
+  if (grepl("openblas", blas_name)) {
+    Sys.setenv(OPENBLAS_NUM_THREADS = nthreads)
+  } else if (grepl("mkl", blas_name)) {
+    Sys.setenv(MKL_NUM_THREADS = nthreads)
+  } else if (grepl("accelerate", blas_name) || grepl("vecLib", blas_name)) {
+    Sys.setenv(VECLIB_MAXIMUM_THREADS = nthreads)
+  } else {
+    message("Unknown BLAS: thread setting may not take effect")
+  }
+  
+  # Optionally, verify
+  message("Using BLAS: ", R.version$BLAS, " with ", nthreads, " threads")
+}
+
 theta.frank <- function(x,y,alpha=0.0023) {
   A <- (alpha-1)*log(alpha)*alpha^(2-exp(-x)-exp(-y))
   B <- (alpha^(1-exp(-x))-alpha)*(alpha^(1-exp(-y))-alpha)
@@ -403,19 +421,19 @@ deriv_comp_poly <- function(datalist) {
 # }
 #
 
-Hessian <- function (coef.vector, X1, X2, Sl = NULL, datalist) {
-
+Hessian <- function (coef.vector, X1, X2, Sl = NULL, datalist, ncores = 1, batch_size = 1000) {
+  
   # df <- ncol(X1)
 
   # Tensor product spline
-  logtheta <- WoodTensor(X1, X2, coef.vector = coef.vector)
-  
-  # print(logtheta[1:10, 1:10])
-
-  logtheta2 <- c(logtheta)[datalist$idxN2]
-  logtheta1 <- c(t(logtheta))[datalist$idxN1]
-  
-  rm(logtheta)
+  # logtheta <- WoodTensor(X1, X2, coef.vector = coef.vector)
+  # 
+  # # print(logtheta[1:10, 1:10])
+  # 
+  # logtheta2 <- c(logtheta)[datalist$idxN2+1]
+  # logtheta1 <- c(t(logtheta))[datalist$idxN1+1]
+  # 
+  # rm(logtheta)
 
   # hessianold <- hessianC(riskset1 = datalist$riskset1,
   #                     riskset2 = datalist$riskset2,
@@ -430,23 +448,23 @@ Hessian <- function (coef.vector, X1, X2, Sl = NULL, datalist) {
   #                     I3 = datalist$I3,
   #                     I4 = datalist$I4)
   
-  hessian <- hessian_fast(riskset1 = datalist$riskset1,
-                        riskset2 = datalist$riskset2,
-                        logtheta1 = logtheta1,
-                        logtheta2 = logtheta2,
-                        delta1 = datalist$delta1,
-                        delta2 = datalist$delta2,
-                        I1 = datalist$I1,
-                        I2 = datalist$I2,
-                        I3 = datalist$I3,
-                        I4 = datalist$I4,
-                        X1 = X1,
-                        X2 = X2,
-                        idxN1 = datalist$idxN1 - 1,
-                        idxN2 = datalist$idxN2 - 1)
+  if (ncores > 1) {
+    hessian <- hessian_fast_batched_parallel(datalist = datalist,
+                                             x = coef.vector,
+                                             X1 = X1,
+                                             X2 = X2,
+                                             batch_size = batch_size)
+  } else {
+    hessian <- hessian_fast_batched(datalist = datalist,
+                                    x = coef.vector,
+                                    X1 = X1,
+                                    X2 = X2,
+                                    batch_size = batch_size)
+  }
+
 
   if (!is.null(Sl)) hessian <- hessian + Sl
-
+  
   return(hessian)
 
 
@@ -477,52 +495,15 @@ HessianPoly <- function(beta, datalist, deriv) {
 Score2 <- function(coef.vector, X1, X2, datalist, Sl = NULL) {
 
   # Tensor product spline
-  logtheta <- WoodTensor(X1, X2, coef.vector = coef.vector)
-  logtheta1 <- c(t(logtheta))[datalist$idxN1]
-  logtheta2 <- c(logtheta)[datalist$idxN2]
-
-  rm(logtheta)
-
-  # N1 <- datalist$riskset1[datalist$riskset1 > 0]
-  # N2 <- datalist$riskset2[datalist$riskset2 > 0]
-
-  # w1 <- weights[datalist$idxN1]
-  # w2 <- weights[datalist$idxN2]
-
-
-  # gradientold <- gradientC(riskset1 = datalist$riskset1,
-  #                       riskset2 = datalist$riskset2,
-  #                       logtheta1 = logtheta1,
-  #                       logtheta2 = logtheta2,
-  #                       df = df,
-  #                       deriv = deriv,
-  #                       delta1 = datalist$delta1,
-  #                       delta2 = datalist$delta2,
-  #                       I1 = datalist$I1,
-  #                       I2 = datalist$I2,
-  #                       I3 = datalist$I3,
-  #                       I4 = datalist$I4,
-  #                       I5 = datalist$I5,
-  #                       I6 = datalist$I6) # gradientC returns vector of derivatives of -loglik
+  # logtheta <- WoodTensor(X1, X2, coef.vector = coef.vector)
+  # logtheta1 <- c(t(logtheta))[datalist$idxN1+1]
+  # logtheta2 <- c(logtheta)[datalist$idxN2+1]
+  # 
+  # rm(logtheta)
   
-  gradient <- gradientNew(riskset1 = datalist$riskset1,
-                          riskset2 = datalist$riskset2,
-                          logtheta1 = logtheta1,
-                          logtheta2 = logtheta2,
-                          delta1 = datalist$delta1,
-                          delta2 = datalist$delta2,
-                          I1 = datalist$I1,
-                          I2 = datalist$I2,
-                          I3 = datalist$I3,
-                          I4 = datalist$I4,
-                          I5 = datalist$I5,
-                          I6 = datalist$I6,
-                          X1 = X1,
-                          X2 = X2,
-                          idxN1 = datalist$idxN1 - 1,
-                          idxN2 = datalist$idxN2 - 1) # gradientC returns vector of derivatives of -loglik
+  gradient <- as.vector(gradient_fast(coef.vector, datalist, X1, X2)) # gradientC returns vector of derivatives of -loglik
 
-  if (!is.null(Sl)) penalty <- t(coef.vector) %*% Sl
+  if (!is.null(Sl)) penalty <- Sl %*% coef.vector
   else penalty <- 0
 
   return(gradient + penalty)
@@ -655,10 +636,10 @@ SimData <- function (K, cens.par = 0, alpha = c(3,5,1.5), weights = c(0.2,0.4,0.
   # N1 <- c(t(N))
   # N2 <- c(N)
 
-  N <- riskset_fast(X[,1],X[,2]);
-  # mode(N) <- "integer"
+  N <- riskset_fast(X[,1],X[,2]);   mode(N) <- "integer"
   N1 <- c(t(N))
   N2 <- c(N)
+  rm(N)
 
   # Row index of positive elements in riskset
   idxN1 <- which(N1 > 0)
@@ -669,27 +650,27 @@ SimData <- function (K, cens.par = 0, alpha = c(3,5,1.5), weights = c(0.2,0.4,0.
 
   #### I(X1j >= X1i)
   # I1 <- sapply(X[,1], function(x) 1*(X[,1] >= x)) # col=1,...,i,...,n row=1,...,j,...,n
-  I1 <- IndGreater(X[,1])
+  I1 <- indgreater(X[,1]); mode(I1) <- "integer"
 
   #### I(X2j <= X2i)
   # I2 <- sapply(X[,2], function(x) 1*(X[,2] <= x)) # col=1,...,i,...,n row=1,...,j,...,n
-  I2 <- IndLess(X[,2])
+  I2 <- indless(X[,2]); mode(I2) <- "integer"
 
   #### I(X2j >= X2i)
   # I3 <- sapply(X[,2], function(x) 1*(X[,2] >= x)) # col=1,...,i,...,n row=1,...,j,...,n
-  I3 <- t(I2)
+  # I3 <- t(I2); mode(I3) <- "integer"
   #
   # #### I(X1j <= X1i)
   # # I4 <- sapply(X[,1], function(x) 1*(X[,1] <= x)) # col=1,...,i,...,n row=1,...,j,...,n
-  I4 <- t(I1)
+  # I4 <- t(I1); mode(I4) <- "integer"
 
   #### I(X1j = X1i) NOTE THAT THIS IS DIAG(1,500,500) IF NO TIES
   # I5 <- sapply(X[,1], function(x) 1*(X[,1] == x)) # col=1,...,i,...,n row=1,...,j,...,n
-  I5 <- IndEqual(X[,1])
+  I5 <- indequal(X[,1]); mode(I5) <- "integer"
 
   #### I(X2j = X2i) NOTE THAT THIS IS DIAG(1,500,500) IF NO TIES
   # I6 <- sapply(X[,2], function(x) 1*(X[,2] == x)) # col=1,...,i,...,n row=1,...,j,...,n
-  I6 <- IndEqual(X[,2])
+  I6 <- indequal(X[,2]); mode(I6) <- "integer"
 
   #I1 <- lapply(X1, function(x) 1*(X2 >= x))
   #test <- matrix(unlist(I1), ncol = 500, byrow = FALSE)
@@ -698,23 +679,23 @@ SimData <- function (K, cens.par = 0, alpha = c(3,5,1.5), weights = c(0.2,0.4,0.
   # A1 <- c(I1*outer(delta[,2], delta[,1]))[N1 > 0]
   # A2 <- c(I3*outer(delta[,1], delta[,2]))[N2 > 0]
 
-  delta.prod = DeltaC(delta[,1], delta[,2])
+  delta.prod = delta(delta[,1], delta[,2])
   delta.prod1 <- c(t(delta.prod))
   delta.prod2 <- c(delta.prod)
+  rm(delta.prod)
   
+
   RcppParallel::setThreadOptions(numThreads = 1)
   
   return(list(X = X,
-              idx = delta,
-              # knots = cbind(knots1,knots2),
-              idxN1 = idxN1,
-              idxN2 = idxN2,
+              idxN1 = idxN1-1, # C++ indexing (starts at 0)
+              idxN2 = idxN2-1, # C++ indexing (starts at 0)
               riskset1 = N1[idxN1],
               riskset2 = N2[idxN2],
               I1 = c(I1)[idxN1],
               I2 = c(I2)[idxN1],
-              I3 = c(I3)[idxN2],
-              I4 = c(I4)[idxN2],
+              I3 = c(t(I2))[idxN2],
+              I4 = c(t(I1))[idxN2],
               I5 = c(I5)[idxN1],
               I6 = c(I6)[idxN2],
               delta1 = delta.prod1[idxN1],
@@ -804,8 +785,8 @@ PrepareData <- function (t1, t2, cens1, cens2) {
 
   return(list(X = X,
               idx = delta,
-              idxN1 = idxN1,
-              idxN2 = idxN2,
+              idxN1 = idxN1-1, # C++ indexing (starts at 0)
+              idxN2 = idxN2-1, # C++ indexing (starts at 0)
               riskset1 = N1[N1>0],
               riskset2 = N2[N2>0],
               I1 = c(I1)[N1 > 0],
@@ -842,28 +823,13 @@ wrapper2 <- function(coef.vector, X1, X2, datalist, Sl = NULL, H = NULL, minusLo
   } else logdetH <- 0
 
 
-  logtheta <- WoodTensor(X1 = X1, X2 = X2, coef.vector = coef.vector)
-  logtheta1 <- c(t(logtheta))[datalist$idxN1]
-  logtheta2 <- c(logtheta)[datalist$idxN2]
+  # logtheta <- WoodTensor(X1 = X1, X2 = X2, coef.vector = coef.vector)
+  # logtheta1 <- c(t(logtheta))[datalist$idxN1+1]
+  # logtheta2 <- c(logtheta)[datalist$idxN2+1]
 
-  rm(logtheta)
+  # rm(logtheta)
 
-  # w1 <- weights[datalist$idxN1]
-  # w2 <- weights[datalist$idxN2]
-
-  L <- logLikC(riskset1 = datalist$riskset1,
-               riskset2 = datalist$riskset2,
-               logtheta1 = logtheta1,
-               logtheta2 = logtheta2,
-               delta1 = datalist$delta1,
-               delta2 = datalist$delta2,
-               I1 = datalist$I1,
-               I2 = datalist$I2,
-               I3 = datalist$I3,
-               I4 = datalist$I4,
-               I5 = datalist$I5,
-               I6 = datalist$I6)
-
+  L <- loglikC(coef.vector, datalist, X1, X2)
 
   ll <- L + penaltyLik/2
   REML <- ll - logSl/2 + logdetH/2
@@ -897,7 +863,7 @@ testfunc <- function(coef.vector, X1, X2, datalist) {
 }
 
 # Create list of control parameters for EstimatePenal
-efs.control <- function(lambda.tol = 1, REML.tol = 0.5, ll.tol = 0.01, maxiter = 10, lambda.max = exp(15), knot.margin = 0.001) {
+efs.control <- function(lambda.tol = 0.1, REML.tol = 0.01, ll.tol = 0.01, maxiter = 100, lambda.max = exp(15), knot.margin = 0.001) {
   list(lambda.tol = lambda.tol,
        REML.tol = REML.tol,
        ll.tol = ll.tol,
@@ -943,7 +909,8 @@ EstimatePenal2 <- function(datalist, dim, degree = 3, lambda.init = c(1,1), star
   fit <- efsud.fit2(start = start, X1 = obj1$X, X2 = obj2$X, datalist = datalist,
                    # Sl = lambda.init*S
                    Sl = lambda.init[1]*S1 + lambda.init[2]*S2,
-                   control = nl.control)
+                   control = nl.control,
+                   ncores = ncores)
   k <- 1
   score <- rep(0, control$maxiter)
   for (iter in 1:control$maxiter) {
@@ -993,7 +960,7 @@ EstimatePenal2 <- function(datalist, dim, degree = 3, lambda.init = c(1,1), star
     Sl.new <- lambda.new[1]*S1 + lambda.new[2]*S2
     # Sl.new <- lambda.new*S
 
-    fit <- efsud.fit2(start = fit$beta, X1 = obj1$X, X2 = obj2$X, datalist = datalist, Sl = Sl.new, control = nl.control)
+    fit <- efsud.fit2(start = fit$beta, X1 = obj1$X, X2 = obj2$X, datalist = datalist, Sl = Sl.new, control = nl.control, ncores = ncores)
     l1 <- fit$REML
 
     # Start of step control ----
@@ -1006,7 +973,8 @@ EstimatePenal2 <- function(datalist, dim, degree = 3, lambda.init = c(1,1), star
                             # Sl = lambda2*S
                             Sl = lambda2[1]*S1 + lambda2[2]*S2,
                             # weights = weights,
-                            control = nl.control)
+                            control = nl.control,
+                            ncores = ncores)
           l2 <- fit2$REML
           if (l2 > l1) { # Improvement - accept extension
             lambda.new <- lambda2
@@ -1025,7 +993,8 @@ EstimatePenal2 <- function(datalist, dim, degree = 3, lambda.init = c(1,1), star
                            # Sl = lambda3*S
                            Sl = lambda3[1]*S1 + lambda3[2]*S2,
                            # weights = weights,
-                           control = nl.control)
+                           control = nl.control,
+                           ncores = ncores)
           lk <- fit$REML
 
           # k <- k + 1
@@ -1085,7 +1054,7 @@ EstimatePenal2 <- function(datalist, dim, degree = 3, lambda.init = c(1,1), star
   return(list(
     beta = fit$beta,
     lambda = lambda.new,
-    vcov = sqrt(2)*solve(fit$hessian + lambda.new[1]*S1 + lambda.new[2]*S2),
+    vcov = 2*solve(fit$hessian + lambda.new[1]*S1 + lambda.new[2]*S2),
     iterations = iter,
     ll = fit$ll,
     history = score[1:iter],
@@ -1095,21 +1064,24 @@ EstimatePenal2 <- function(datalist, dim, degree = 3, lambda.init = c(1,1), star
 }
 
 
-efsud.fit2 <- function(start, X1, X2, datalist, Sl, control = nleqslv.control()) {
+efsud.fit2 <- function(start, X1, X2, datalist, Sl, control = nleqslv.control(), ncores = 1) {
 
   # if (is.null(deriv.comp)) deriv <- deriv_comp(X1 = X1, X2 = X2, datalist = datalist, weights = weights)
   # else deriv <- deriv.comp
 
   # beta <- multiroot(Score2, start = start, jacfunc = Hessian, jactype = "fullusr", rtol = 1e-10, X1 = X1, X2 = X2, Sl = Sl, datalist = datalist, deriv = deriv)$root
+
   estim <- nleqslv::nleqslv(x = start, fn = Score2, jac = Hessian,
                             method = control$method, global = control$global,
-                            X1 = X1, X2 = X2, datalist = datalist, Sl = Sl)
+                            X1 = X1, X2 = X2, datalist = datalist, Sl = Sl, ncores = ncores)
   beta <- estim$x
   if(any(is.na(beta))) {
     estim
     stop("One of the spline coefficients is NA")
   }
-  H <- Hessian(coef.vector = beta, X1 = X1, X2 = X2, datalist = datalist)
+
+  H <- Hessian(coef.vector = beta, X1 = X1, X2 = X2, datalist = datalist, ncores = ncores)
+
   fit <-  wrapper2(coef.vector = beta,
                   X1 = X1, X2 = X2,
                   Sl = Sl, H = H,
