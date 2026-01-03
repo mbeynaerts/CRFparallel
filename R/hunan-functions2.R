@@ -421,7 +421,7 @@ deriv_comp_poly <- function(datalist) {
 # }
 #
 
-Hessian <- function (coef.vector, X1, X2, Sl = NULL, datalist, ncores = 1, batch_size = 1000) {
+Hessian <- function (coef.vector, X1, X2, Sl = NULL, datalist, batch_size = 1000) {
   
   # df <- ncol(X1)
 
