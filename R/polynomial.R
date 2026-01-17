@@ -59,7 +59,7 @@ HessianPoly <- function(beta, X1, X2, datalist) {
 }
 
 
-EstimatePoly <- function(start = rep(0,10), datalist, control = nl.control(), ncores = 1) {
+EstimatePoly <- function(start = rep(0,10), datalist, control = nleqslv.control(), ncores = 1) {
   RcppParallel::setThreadOptions(numThreads = ncores)
   
   
