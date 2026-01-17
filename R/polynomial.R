@@ -65,11 +65,9 @@ EstimatePoly <- function(start = rep(0,10), datalist, control = nleqslv.control(
   
   X1 <- cbind(1,
               datalist$X[,1],
-              datalist$X[,1],
               datalist$X[,1]^2,
               datalist$X[,1]^3)
   X2 <- cbind(1,
-              datalist$X[,2],
               datalist$X[,2],
               datalist$X[,2]^2,
               datalist$X[,2]^3)
