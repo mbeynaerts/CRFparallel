@@ -7,7 +7,7 @@ poly.fit <- function (beta, X1, X2, datalist) {
                                  X1,
                                  X2) # gradientC returns vector of derivatives of -loglik
   
-  return(gradient)
+  return(as.vector(gradient))
   
   
   # logtheta1 <- t(logtheta2)
