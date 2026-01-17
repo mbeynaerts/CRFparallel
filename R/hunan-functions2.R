@@ -89,73 +89,6 @@ polynomial <- function(t1,t2, coef.vec, logCRF = TRUE) {
 
 }
 
-poly.fit <- function (beta, datalist, deriv) {
-
-  # logtheta <- X1 %*% matrix(beta, ncol = df, byrow = FALSE) %*% t(X2)
-  logtheta <- outer(datalist$X[,1], datalist$X[,2], function (x,y) polynomial(x,y, coef.vec = beta))
-  logtheta1 <- c(t(logtheta))[datalist$riskset1 > 0]
-  logtheta2 <- c(logtheta)[datalist$riskset2 > 0]
-
-  gradient <- gradientPoly(riskset1 = datalist$riskset1[datalist$riskset1 > 0],
-                           riskset2 = datalist$riskset2[datalist$riskset2 > 0],
-                           logtheta1 = logtheta1,
-                           logtheta2 = logtheta2,
-                           df = 10,
-                           delta1 = datalist$delta1,
-                           delta2 = datalist$delta2,
-                           deriv = deriv,
-                           I1 = datalist$I1,
-                           I2 = datalist$I2,
-                           I3 = datalist$I3,
-                           I4 = datalist$I4,
-                           I5 = datalist$I5,
-                           I6 = datalist$I6) # gradientC returns vector of derivatives of -loglik
-
-  return(gradient)
-
-
-  # logtheta1 <- t(logtheta2)
-  #
-  # N1 <- t(datalist$riskset)
-  # N2 <- datalist$riskset
-  #
-  # delta2 <- datalist$delta.prod
-  # delta1 <- t(delta2)
-  #
-  # I1 <- datalist$I1
-  # I2 <- datalist$I2
-  # I3 <- t(datalist$I2)
-  # I4 <- t(datalist$I1)
-  # I5 <- datalist$I5
-  # I6 <- datalist$I6
-  #
-  # A1 <- (delta1*I1)[N1 > 0]
-  # A2 <- (delta2*I3)[N2 > 0]
-  #
-  # B1 <- c(datalist$I5*logtheta1)[N1 > 0]
-  # B2 <- c(datalist$I6*logtheta2)[N2 > 0]
-  #
-  # C1 <- c(N1 + I2*(exp(logtheta1)-1))[N1 > 0]
-  # C2 <- c(N2 + I4*(exp(logtheta2)-1))[N2 > 0]
-  #
-  #
-  # L1 <- sum(A1*(B1 - log(C1)))
-  # L2 <- sum(A2*(B2 - log(C2)))
-  #
-  # L1 <- logLikC(riskset = t(datalist$riskset),
-  #               logtheta = t(logtheta2),
-  #               delta = t(datalist$delta.prod),
-  #               I1 = datalist$I1, I2 = datalist$I2, I3 = datalist$I5)
-  #
-  # L2 <- logLikC(riskset = datalist$riskset,
-  #               logtheta = logtheta2,
-  #               delta = datalist$delta.prod,
-  #               I1 = t(datalist$I2), I2 = t(datalist$I1), I3 = datalist$I6)
-#
-#   return(-L1-L2)
-
-}
-
 WoodSpline <- function(t, dim, degree = 3, type = "ps", quantile = FALSE, scale = TRUE, repara = TRUE, m2 = degree-1, knot.margin = 0.001) {
 
   # Create knot sequence for spline ----
@@ -317,52 +250,52 @@ WoodTensor.predict <- function(t1, t2, fit, logCRF = TRUE) {
 
 }
 
-deriv_comp <- function(X1, X2, datalist) {
-
-  df <- ncol(X1)
-  M <- diag(df^2)
-
-  N1 <- datalist$riskset1
-  N2 <- datalist$riskset2
-
-  nrows <- length(N1)
-
-  deriv <- apply(M, 2,
-                 function(m) {A <- matrix(NA, ncol = 2, nrow = nrows)
-                              X <- WoodTensor(coef.vector = m, X1 = X1, X2 = X2)
-                              A[,1] <- c(t(X))[datalist$idxN1]
-                              A[,2] <- c(X)[datalist$idxN2]
-                              return(A) },
-                 simplify = FALSE
-                 )
-
-  return(deriv)
-}
-
-deriv_comp_poly <- function(datalist) {
-
-  df <- 10
-
-  M <- diag(df)
-
-  N1 <- datalist$riskset1
-  N2 <- datalist$riskset2
-
-  nrows <- sum(N1>0)
-
-  # List of gradient matrices for every spline coefficient
-  deriv <- apply(M, 2,
-                 function(m) {
-                   A <- matrix(NA, ncol = 2, nrow = nrows)
-                   B <- outer(datalist$X[,1], datalist$X[,2], function (x,y) polynomial(x,y, coef.vec = m))
-                   A[,1] <- c(t(B))[N1 > 0]
-                   A[,2] <- c(B)[N2 > 0]
-                   return(A)
-                 },
-                 simplify = FALSE)
-
-  return(deriv)
-}
+# deriv_comp <- function(X1, X2, datalist) {
+# 
+#   df <- ncol(X1)
+#   M <- diag(df^2)
+# 
+#   N1 <- datalist$riskset1
+#   N2 <- datalist$riskset2
+# 
+#   nrows <- length(N1)
+# 
+#   deriv <- apply(M, 2,
+#                  function(m) {A <- matrix(NA, ncol = 2, nrow = nrows)
+#                               X <- WoodTensor(coef.vector = m, X1 = X1, X2 = X2)
+#                               A[,1] <- c(t(X))[datalist$idxN1]
+#                               A[,2] <- c(X)[datalist$idxN2]
+#                               return(A) },
+#                  simplify = FALSE
+#                  )
+# 
+#   return(deriv)
+# }
+# 
+# deriv_comp_poly <- function(datalist) {
+# 
+#   df <- 10
+# 
+#   M <- diag(df)
+# 
+#   N1 <- datalist$riskset1
+#   N2 <- datalist$riskset2
+# 
+#   nrows <- sum(N1>0)
+# 
+#   # List of gradient matrices for every spline coefficient
+#   deriv <- apply(M, 2,
+#                  function(m) {
+#                    A <- matrix(NA, ncol = 2, nrow = nrows)
+#                    B <- outer(datalist$X[,1], datalist$X[,2], function (x,y) polynomial(x,y, coef.vec = m))
+#                    A[,1] <- c(t(B))[N1 > 0]
+#                    A[,2] <- c(B)[N2 > 0]
+#                    return(A)
+#                  },
+#                  simplify = FALSE)
+# 
+#   return(deriv)
+# }
 
 
 # derivatives2 <- function(coef.vector, X1, X2, datalist, deriv, Sl = NULL, gradient = FALSE, hessian = TRUE) {
@@ -468,27 +401,6 @@ Hessian <- function (coef.vector, X1, X2, Sl = NULL, datalist, ncores = 1, batch
   return(hessian)
 
 
-}
-
-HessianPoly <- function(beta, datalist, deriv) {
-
-  logtheta <- outer(datalist$X[,1], datalist$X[,2], function (x,y) polynomial(x,y, coef.vec = beta))
-  logtheta1 <- c(t(logtheta))[datalist$riskset1 > 0]
-  logtheta2 <- c(logtheta)[datalist$riskset2 > 0]
-
-  hessian <- hessianPolyC(riskset1 = datalist$riskset1[datalist$riskset1>0],
-                          riskset2 = datalist$riskset2[datalist$riskset2>0],
-                          logtheta1 = logtheta1,
-                          logtheta2 = logtheta2,
-                          deriv = deriv,
-                          df = 10,
-                          delta1 = datalist$delta1,
-                          delta2 = datalist$delta2,
-                          I1 = datalist$I1,
-                          I2 = datalist$I2,
-                          I3 = datalist$I3,
-                          I4 = datalist$I4)
-  return(hessian)
 }
 
 
@@ -703,7 +615,9 @@ SimData <- function (K, cens.par = 0, alpha = c(3,5,1.5), weights = c(0.2,0.4,0.
               delta2 = delta.prod2[idxN2]))
 }
 
-PrepareData <- function (t1, t2, cens1, cens2) {
+PrepareData <- function (t1, t2, cens1, cens2, ncores = 1) {
+  
+  RcppParallel::setThreadOptions(numThreads = ncores)
 
   X <- as.matrix(cbind(t1,t2))
   delta <- as.matrix(cbind(cens1,cens2))
@@ -733,71 +647,75 @@ PrepareData <- function (t1, t2, cens1, cens2) {
 
 
   ## Calculating the risk set
-
+  
   # N <- outer(X[,1], X[,2], function(x,y) mapply(riskset,x,y))
   # N1 <- c(t(N))
   # N2 <- c(N)
-
-  N <- risksetC(X[,1],X[,2])
+  
+  N <- riskset_fast(X[,1],X[,2]);   mode(N) <- "integer"
   N1 <- c(t(N))
   N2 <- c(N)
-
+  rm(N)
+  
   # Row index of positive elements in riskset
   idxN1 <- which(N1 > 0)
   idxN2 <- which(N2 > 0)
-
-
+  
+  
   ## Calculating indicator functions in likelihood
-
+  
   #### I(X1j >= X1i)
   # I1 <- sapply(X[,1], function(x) 1*(X[,1] >= x)) # col=1,...,i,...,n row=1,...,j,...,n
-  I1 <- IndGreater(X[,1])
-
+  I1 <- indgreater(X[,1]); mode(I1) <- "integer"
+  
   #### I(X2j <= X2i)
   # I2 <- sapply(X[,2], function(x) 1*(X[,2] <= x)) # col=1,...,i,...,n row=1,...,j,...,n
-  I2 <- IndLess(X[,2])
-
+  I2 <- indless(X[,2]); mode(I2) <- "integer"
+  
   #### I(X2j >= X2i)
   # I3 <- sapply(X[,2], function(x) 1*(X[,2] >= x)) # col=1,...,i,...,n row=1,...,j,...,n
-  I3 <- t(I2)
+  # I3 <- t(I2); mode(I3) <- "integer"
   #
   # #### I(X1j <= X1i)
   # # I4 <- sapply(X[,1], function(x) 1*(X[,1] <= x)) # col=1,...,i,...,n row=1,...,j,...,n
-  I4 <- t(I1)
-
+  # I4 <- t(I1); mode(I4) <- "integer"
+  
   #### I(X1j = X1i) NOTE THAT THIS IS DIAG(1,500,500) IF NO TIES
   # I5 <- sapply(X[,1], function(x) 1*(X[,1] == x)) # col=1,...,i,...,n row=1,...,j,...,n
-  I5 <- IndEqual(X[,1])
-
+  I5 <- indequal(X[,1]); mode(I5) <- "integer"
+  
   #### I(X2j = X2i) NOTE THAT THIS IS DIAG(1,500,500) IF NO TIES
   # I6 <- sapply(X[,2], function(x) 1*(X[,2] == x)) # col=1,...,i,...,n row=1,...,j,...,n
-  I6 <- IndEqual(X[,2])
-
+  I6 <- indequal(X[,2]); mode(I6) <- "integer"
+  
   #I1 <- lapply(X1, function(x) 1*(X2 >= x))
   #test <- matrix(unlist(I1), ncol = 500, byrow = FALSE)
-
-
+  
+  
   # A1 <- c(I1*outer(delta[,2], delta[,1]))[N1 > 0]
   # A2 <- c(I3*outer(delta[,1], delta[,2]))[N2 > 0]
-
-  delta.prod = DeltaC(delta[,1], delta[,2])
+  
+  delta.prod = delta(delta[,1], delta[,2])
   delta.prod1 <- c(t(delta.prod))
   delta.prod2 <- c(delta.prod)
-
+  rm(delta.prod)
+  
+  
+  RcppParallel::setThreadOptions(numThreads = 1)
+  
   return(list(X = X,
-              idx = delta,
               idxN1 = idxN1-1, # C++ indexing (starts at 0)
               idxN2 = idxN2-1, # C++ indexing (starts at 0)
-              riskset1 = N1[N1>0],
-              riskset2 = N2[N2>0],
-              I1 = c(I1)[N1 > 0],
-              I2 = c(I2)[N1 > 0],
-              I3 = c(I3)[N2 > 0],
-              I4 = c(I4)[N2 > 0],
-              I5 = c(I5)[N1 > 0],
-              I6 = c(I6)[N2 > 0],
-              delta1 = delta.prod1[N1 > 0],
-              delta2 = delta.prod2[N2 > 0]))
+              riskset1 = N1[idxN1],
+              riskset2 = N2[idxN2],
+              I1 = c(I1)[idxN1],
+              I2 = c(I2)[idxN1],
+              I3 = c(t(I2))[idxN2],
+              I4 = c(t(I1))[idxN2],
+              I5 = c(I5)[idxN1],
+              I6 = c(I6)[idxN2],
+              delta1 = delta.prod1[idxN1],
+              delta2 = delta.prod2[idxN2]))
 }
 
 wrapper2 <- function(coef.vector, X1, X2, datalist, Sl = NULL, H = NULL, minusLogLik=TRUE) { # H is hier gewoon de unpenalized hessian
@@ -1092,14 +1010,6 @@ efsud.fit2 <- function(start, X1, X2, datalist, Sl, control = nleqslv.control(),
   return(list(beta = beta, hessian = H, REML = fit$REML, ll = fit$ll, info = estim))
 }
 
-EstimatePoly <- function(start = rep(0,10), datalist) {
 
-  deriv <- deriv_comp_poly(datalist)
-  beta <- nleqslv::nleqslv(x = start, fn = poly.fit, jac = HessianPoly, method = "Broyden", global = "hook", deriv = deriv, datalist = datalist)
-  V <- HessianPoly(beta$x, datalist, deriv)
-
-  return(list(beta = beta$x, vcov = solve(V)))
-
-}
 
 

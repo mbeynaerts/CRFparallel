@@ -1,13 +1,12 @@
 #include <RcppArmadillo.h>
 #include <RcppParallel.h>
+#include "helpers.h"
 
 using namespace Rcpp;
 using namespace RcppParallel;
 
 // [[Rcpp::depends(RcppArmadillo)]]
 // [[Rcpp::depends(RcppParallel)]]
-
-
 
 struct DataInput {
   
@@ -57,59 +56,6 @@ struct DataInput {
   inline const arma::uvec&  get_idxN2() const { return idxN2; }
   
   };
-
-// Thanks chatGPT!!
-struct Fenwick {
-  std::vector<int> tree;
-  Fenwick(std::size_t n) : tree(n+1, 0) {}
-  
-  void add(std::size_t i) {
-    for (++i; i < tree.size(); i += i & -i)
-      tree[i]++;
-  }
-
-  int sum(std::size_t i) const {
-    int s = 0;
-    for (++i; i > 0; i -= i & -i)
-      s += tree[i];
-    return s;
-  }
-};
-
-struct riskset_worker : public RcppParallel::Worker {
-  
-  RVector<double> x;
-  std::vector<std::size_t> y_rank;
-  std::vector<std::size_t> x_ord;
-  RMatrix<int> N;
-  std::size_t n;
-
-  riskset_worker(NumericVector& x,
-                 const std::vector<std::size_t>& y_rank,
-                 const std::vector<std::size_t>& x_ord,
-                 IntegerMatrix& N)
-    : x(x), y_rank(y_rank), x_ord(x_ord), N(N), n(x.size()) {}
-
-  void operator() (std::size_t begin, std::size_t end) {
-  
-    Fenwick fw(n);
-    std::size_t k = 0;
-  
-    for (std::size_t jj = begin; jj < end; jj++) {
-    
-      std::size_t j = x_ord[jj];
-    
-      while (k < n && x[x_ord[k]] >= x[j]) {
-        fw.add(y_rank[x_ord[k]]);
-        k++;
-      }
-    
-      for (std::size_t i = 0; i < n; i++) {
-        N(j, i) = fw.sum(n - 1) - fw.sum(y_rank[i] - 1);
-      }
-    }
-  }
-};
 
 struct HessianWorker : public RcppParallel::Worker {
   const arma::uvec& indices;
@@ -181,132 +127,6 @@ struct HessianWorker : public RcppParallel::Worker {
 
 
 
-
-
-
-// [[Rcpp::export]]
-arma::mat row_kron(const arma::mat& X, const arma::mat& Y) {
-
-  int m = X.n_rows;
-  int n = X.n_cols;
-  int p = Y.n_cols;
-
-  arma::mat Z(m, n * p);
-
-  for (int i = 0; i < m; ++i) {
-    // Compute Kronecker product of row i of X and row i of Y
-    arma::rowvec kron_row = arma::kron(X.row(i), Y.row(i));
-    Z.row(i) = kron_row;
-  }
-
-  return Z;
-}
-
-// [[Rcpp::export]]
-IntegerMatrix indgreater(NumericVector &x) {
-  int n = x.size();
-  IntegerMatrix elem(n);
-  for (int j=0; j<n; j++) {
-    for (int i=0; i<n; i++) {
-      if (x[j] >= x[i]) {
-        elem(j,i) = 1;
-      } else {
-        elem(j,i) = 0;
-      }
-    }
-  }
-  return elem;
-}
-
-// [[Rcpp::export]]
-IntegerMatrix indless(NumericVector &x) {
-  int n = x.size();
-  IntegerMatrix elem(n);
-  for (int j=0; j<n; j++) {
-    for (int i=0; i<n; i++) {
-      if (x[j] <= x[i]) {
-        elem(j,i) = 1;
-      } else {
-        elem(j,i) = 0;
-      }
-    }
-  }
-  return elem;
-}
-
-// [[Rcpp::export]]
-IntegerMatrix indequal(NumericVector &x) {
-  int n = x.size();
-  IntegerMatrix elem(n);
-  for (int j=0; j<n; j++) {
-    for (int i=0; i<n; i++) {
-      if (x[j] == x[i]) {
-        elem(j,i) = 1;
-      } else {
-        elem(j,i) = 0;
-      }
-    }
-  }
-  return elem;
-}
-
-// // [[Rcpp::export]]
-// IntegerMatrix risksetC(NumericVector x, NumericVector y) {
-//   
-//   std::size_t n = x.size();
-//   IntegerMatrix risksetmat(n);
-//   
-//   // Worker
-//   riskset riskset(x,y,risksetmat);
-//   
-//   // Parallel loop
-//   parallelFor(0, n, riskset);
-//   
-//   return risksetmat;
-// }
-
-// [[Rcpp::export]]
-IntegerMatrix riskset_fast(NumericVector x, NumericVector y) {
-  
-  std::size_t n = x.size();
-  IntegerMatrix N(n);
-
-  // y ranks
-  std::vector<std::size_t> y_ord(n);
-  std::iota(y_ord.begin(), y_ord.end(), 0);
-  std::sort(y_ord.begin(), y_ord.end(),
-            [&](size_t a, size_t b){ return y[a] < y[b]; });
-
-  std::vector<std::size_t> y_rank(n);
-  for (std::size_t i = 0; i < n; i++)
-    y_rank[y_ord[i]] = i;
-
-  // x order descending
-  std::vector<std::size_t> x_ord(n);
-  std::iota(x_ord.begin(), x_ord.end(), 0);
-  std::sort(x_ord.begin(), x_ord.end(),
-            [&](size_t a, size_t b){ return x[a] > x[b]; });
-
-  // Parallel worker
-  riskset_worker w(x, y_rank, x_ord, N);
-  parallelFor(0, n, w);
-
-  return N;
-}
-
-// [[Rcpp::export]]
-IntegerMatrix delta(NumericVector &x, NumericVector &y) {
-  int n = x.size();
-  IntegerMatrix delta(n);
-  for (int j=0; j<n; j++) {
-    for (int i=0; i<n; i++) {
-      delta (j,i) = x[j]*y[i];
-    }
-  }
-  return delta;
-}
-
-
 // [[Rcpp::export]]
 double loglikC(arma::colvec& x,
                const Rcpp::List& datalist,
@@ -351,7 +171,7 @@ arma::vec gradient_fast(arma::colvec& x,
   
   int dim = X1.n_cols;
   int K = X1.n_rows;
-  DataInput input(datalist); // Assuming this is your custom class
+  DataInput input(datalist);
   
   // 1. Map x to a matrix without copying
   arma::mat coefmat(x.memptr(), dim, dim, false, true);
@@ -400,64 +220,10 @@ arma::vec gradient_fast(arma::colvec& x,
 }
 
 // [[Rcpp::export]]
-NumericVector gradientPoly(const NumericVector &riskset1,
-                           const NumericVector &riskset2,
-                           const NumericVector &logtheta1,
-                           const NumericVector &logtheta2,
-                           const Rcpp::List &deriv,
-                           const int &df,
-                           const NumericVector &delta1,
-                           const NumericVector &delta2,
-                           const NumericVector &I1,
-                           const NumericVector &I2,
-                           const NumericVector &I3,
-                           const NumericVector &I4,
-                           const NumericVector &I5,
-                           const NumericVector &I6) {
-
-  int n = riskset1.length();
-  NumericVector result(df);
-  NumericVector common1(n);
-  NumericVector common2(n);
-
-  /* Transform list of derivative matrices into vector of matrices */
-  std::vector<NumericMatrix> deriv_vec(df);
-  for(int k = 0; k < df; ++k) {
-    NumericMatrix deriv_R = deriv[k];
-    /* arma::mat derivMat(deriv_R.begin(), deriv_R.rows(), deriv_R.cols(), false, true);
-     deriv_vec[k] = derivMat; */
-    deriv_vec[k] = deriv_R;
-  }
-
-  common1 = delta1*I1*(I5 - I2*Rcpp::exp(logtheta1)/(riskset1 + I2*Rcpp::exp(logtheta1) - I2));
-  common2 = delta2*I3*(I6 - I4*Rcpp::exp(logtheta2)/(riskset2 + I4*Rcpp::exp(logtheta2) - I4));
-
-  for (int m=0; m<df; m++) {
-
-    double sum1 = 0.0;
-    double sum2 = 0.0;
-
-    /* Calculation of L1 */
-    for (int j=0; j<n; j++) {
-      sum1 += common1(j)*deriv_vec[m](j,0);
-      sum2 += common2(j)*deriv_vec[m](j,1);
-    }
-
-    result(m) = -sum1-sum2;
-
-  }
-
-  return(result);
-
-}
-
-
-// [[Rcpp::export]]
-arma::mat hessian_fast(
-    arma::colvec& x, // Cannot be constant due to advanced constructor on coefmat
-    const Rcpp::List& datalist,
-    const arma::mat& X1,
-    const arma::mat& X2) {
+arma::mat hessian_fast(arma::colvec& x, // Cannot be constant due to advanced constructor on coefmat
+                       const Rcpp::List& datalist,
+                       const arma::mat& X1,
+                       const arma::mat& X2) {
   
   DataInput input(datalist);
   
@@ -535,11 +301,10 @@ arma::mat hessian_fast(
 
 // Memory efficient Hessian calculation
 // [[Rcpp::export]]
-arma::mat hessian_fast_efficient(
-    arma::colvec& x, 
-    const Rcpp::List& datalist,
-    const arma::mat& X1,
-    const arma::mat& X2) {
+arma::mat hessian_fast_efficient(arma::colvec& x, 
+                                 const Rcpp::List& datalist,
+                                 const arma::mat& X1,
+                                 const arma::mat& X2) {
   
   DataInput input(datalist);
   
@@ -619,12 +384,11 @@ arma::mat hessian_fast_efficient(
 }
 
 // [[Rcpp::export]]
-arma::mat hessian_fast_batched(
-    arma::colvec& x, 
-    const Rcpp::List& datalist,
-    const arma::mat& X1,
-    const arma::mat& X2,
-    int batch_size = 1000) {
+arma::mat hessian_fast_batched(arma::colvec& x, 
+                               const Rcpp::List& datalist,
+                               const arma::mat& X1,
+                               const arma::mat& X2,
+                               int batch_size = 1000) {
   
   DataInput input(datalist);
   const arma::colvec& riskset1 = input.get_riskset1();
@@ -711,12 +475,11 @@ arma::mat hessian_fast_batched(
 }
 
 // [[Rcpp::export]]
-arma::mat hessian_fast_batched_parallel(
-    arma::colvec& x, 
-    const Rcpp::List& datalist,
-    const arma::mat& X1,
-    const arma::mat& X2,
-    int batch_size = 1000) {
+arma::mat hessian_fast_batched_parallel(arma::colvec& x, 
+                                        const Rcpp::List& datalist,
+                                        const arma::mat& X1,
+                                        const arma::mat& X2,
+                                        int batch_size = 1000) {
   
   DataInput input(datalist);
   const arma::colvec& riskset1 = input.get_riskset1();
@@ -763,55 +526,130 @@ arma::mat hessian_fast_batched_parallel(
   return H;
 }
 
-// [[Rcpp::export]]
-NumericMatrix hessianPolyC(const NumericVector &riskset1,
-                           const NumericVector &riskset2,
-                           const NumericVector &logtheta1,
-                           const NumericVector &logtheta2,
-                           const Rcpp::List &deriv,
-                           const int &df,
-                           const NumericVector &delta1,
-                           const NumericVector &delta2,
-                           const NumericVector &I1,
-                           const NumericVector &I2,
-                           const NumericVector &I3,
-                           const NumericVector &I4) {
-
-  int n = riskset1.length();
-  NumericVector common1(n);
-  NumericVector common2(n);
-
-  NumericMatrix result(df);
-
-  /* Transform list of derivative matrices into vector of matrices */
-  std::vector<NumericMatrix> deriv_vec(df);
-  for(int k = 0; k < df; ++k) {
-    NumericMatrix deriv_R = deriv[k];
-    /* arma::mat derivMat(deriv_R.begin(), deriv_R.rows(), deriv_R.cols(), false, true);
-    deriv_vec[k] = derivMat; */
-    deriv_vec[k] = deriv_R;
-  }
-
-  common1 = -delta1*I1*(riskset1 - I2)*I2*Rcpp::exp(logtheta1)/Rcpp::pow(riskset1 - I2 + I2*Rcpp::exp(logtheta1),2);
-  common2 = -delta2*I3*(riskset2 - I4)*I4*Rcpp::exp(logtheta2)/Rcpp::pow(riskset2 - I4 + I4*Rcpp::exp(logtheta2),2);
-
-  for (int m = 0; m < df; m++) {
-    for (int l = m; l < df; l++) {
-
-      double sum1 = 0.0;
-      double sum2 = 0.0;
-
-      for (int j=0; j<n; j++) {
-        sum1 += common1(j)*deriv_vec[m](j,0)*deriv_vec[l](j,0);
-        sum2 += common2(j)*deriv_vec[m](j,1)*deriv_vec[l](j,1);
+arma::mat logtheta_poly(arma::vec& beta,
+                        const arma::mat& X1,
+                        const arma::mat& X2,
+                        int poly_order = 3) {
+  int dim = X1.n_cols;
+  
+  arma::mat beta_mat = arma::zeros<arma::mat>(dim, dim);
+  int k = 0;
+  for (int j = 0; j < dim; ++j) {
+    for (int i = 0; i < dim; ++i) {
+      // Only map coefficients where the combined power is <= poly_order
+      if (i + j <= poly_order) {
+        beta_mat(i, j) = beta(k++);
       }
-
-      result(m,l) = -sum1-sum2;
-      result(l,m) = result(m,l);
-
     }
   }
+  
+  arma::mat logtheta = X1 * beta_mat * X2.t();
+  
+  return logtheta;
+}
 
-  return(result);
+// [[Rcpp::export]]
+arma::vec gradient_poly_fast(arma::colvec& x,
+                             const Rcpp::List& datalist,
+                             const arma::mat &X1,
+                             const arma::mat &X2) {
+  
+  int K = X1.n_rows;
+  DataInput input(datalist);
+
+  // 2. Calculate logtheta
+  // logtheta(i, j) = X1.row(i) * coefmat * X2.row(j).t()
+  arma::mat logtheta = logtheta_poly(x, X1, X2);
+  arma::colvec logtheta2(logtheta.memptr(), logtheta.n_elem, false, true);
+  arma::colvec logtheta1 = vectorise(logtheta.t());
+  
+  // 3. Compute common components efficiently
+  // Instead of vectorising everything, we compute the weights into matrix form
+  arma::mat W1 = arma::zeros<arma::mat>(K, K);
+  arma::mat W2 = arma::zeros<arma::mat>(K, K);
+  
+  // Pre-extract indices and vectors to avoid repeated get calls
+  const arma::uvec& idxN1 = input.get_idxN1();
+  const arma::uvec& idxN2 = input.get_idxN2();
+  const arma::colvec& riskset1 = input.get_riskset1();
+  const arma::colvec& riskset2 = input.get_riskset2();
+  const arma::colvec& delta1 = input.get_delta1();
+  const arma::colvec& delta2 = input.get_delta2();
+  const arma::colvec& I1 = input.get_I1();
+  const arma::colvec& I2 = input.get_I2();
+  const arma::colvec& I3 = input.get_I3();
+  const arma::colvec& I4 = input.get_I4();
+  const arma::colvec& I5 = input.get_I5();
+  const arma::colvec& I6 = input.get_I6();
+  
+  // Vectorized weight calculation (subsetting only what's needed)
+  arma::vec v_common1 = delta1 % I1 % (I5 - I2 / ((riskset1 - I2) % arma::exp(-logtheta1.elem(idxN1)) + I2));
+  arma::vec v_common2 = delta2 % I3 % (I6 - I4 / ((riskset2 - I4) % arma::exp(-logtheta2.elem(idxN2)) + I4));
+
+  // Map weights back to KxK structure
+  W1.elem(idxN1) = v_common1; // W1 corresponds to the transposed logic in your code
+  W2.elem(idxN2) = v_common2;
+  
+  // 4. The "Magic" Step: Replace the loop with Matrix Multiplications
+  // The sum of (common * kron) is equivalent to X1.T * WeightMatrix * X2
+  // We handle the indices by using the sparse-like weight matrices W1 and W2
+  
+  arma::mat grad_mat = -(X1.t() * W1.t() * X2) - (X1.t() * W2 * X2);
+  
+  // 5. Return as a vector
+  return arma::vectorise(grad_mat);
+}
+
+// [[Rcpp::export]]
+arma::mat hessian_poly_batched_parallel(arma::colvec& x, 
+                                        const Rcpp::List& datalist,
+                                        const arma::mat& X1,
+                                        const arma::mat& X2,
+                                        int batch_size = 1000) {
+
+  DataInput input(datalist);
+  const arma::colvec& riskset1 = input.get_riskset1();
+  const arma::colvec& riskset2 = input.get_riskset2();
+  const arma::colvec& delta1   = input.get_delta1();
+  const arma::colvec& delta2   = input.get_delta2();
+  const arma::colvec& I1       = input.get_I1();
+  const arma::colvec& I2       = input.get_I2();
+  const arma::colvec& I3       = input.get_I3();
+  const arma::colvec& I4       = input.get_I4();
+  const arma::uvec& idxN1      = input.get_idxN1();
+  const arma::uvec& idxN2      = input.get_idxN2();
+  
+  int dim = X1.n_cols;
+  
+  // 1. Calculate common weights (as before)
+  arma::mat logtheta = logtheta_poly(x, X1, X2);
+  arma::colvec logtheta2(logtheta.memptr(), logtheta.n_elem, false, true);
+  arma::colvec logtheta1 = vectorise(logtheta.t());
+  
+  // arma::colvec logtheta1 = arma::vectorise(logtheta.t());
+  // arma::colvec logtheta2 = arma::vectorise(logtheta);
+  
+  arma::colvec exp_neg1 = arma::exp(-logtheta1.elem(idxN1));
+  arma::colvec exp_neg2 = arma::exp(-logtheta2.elem(idxN2));
+  
+  arma::colvec denom1 = arma::square((riskset1 - I2) % exp_neg1 + I2);
+  arma::colvec denom2 = arma::square((riskset2 - I4) % exp_neg2 + I4);
+  
+  const double eps = 1e-12;
+  denom1.transform([&](double v){ return std::max(v, eps); });
+  denom2.transform([&](double v){ return std::max(v, eps); });
+  
+  arma::colvec common1 = -delta1 % I1 % I2 % (riskset1 - I2) % exp_neg1 / denom1;
+  arma::colvec common2 = -delta2 % I3 % I4 % (riskset2 - I4) % exp_neg2 / denom2;
+
+  HessianWorker worker1(idxN1, common1, X1, X2, dim, true, batch_size);
+  RcppParallel::parallelReduce(0, idxN1.n_elem, worker1);
+  
+  HessianWorker worker2(idxN2, common2, X1, X2, dim, false, batch_size);
+  RcppParallel::parallelReduce(0, idxN2.n_elem, worker2);
+  
+  arma::mat H = worker1.local_H + worker2.local_H;
+
+  return H;
 
 }

@@ -24,34 +24,34 @@ BEGIN_RCPP
 END_RCPP
 }
 // indgreater
-IntegerMatrix indgreater(NumericVector& x);
+IntegerMatrix indgreater(NumericVector x);
 RcppExport SEXP _CRFparallel_indgreater(SEXP xSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< NumericVector& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type x(xSEXP);
     rcpp_result_gen = Rcpp::wrap(indgreater(x));
     return rcpp_result_gen;
 END_RCPP
 }
 // indless
-IntegerMatrix indless(NumericVector& x);
+IntegerMatrix indless(NumericVector x);
 RcppExport SEXP _CRFparallel_indless(SEXP xSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< NumericVector& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type x(xSEXP);
     rcpp_result_gen = Rcpp::wrap(indless(x));
     return rcpp_result_gen;
 END_RCPP
 }
 // indequal
-IntegerMatrix indequal(NumericVector& x);
+IntegerMatrix indequal(NumericVector x);
 RcppExport SEXP _CRFparallel_indequal(SEXP xSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< NumericVector& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type x(xSEXP);
     rcpp_result_gen = Rcpp::wrap(indequal(x));
     return rcpp_result_gen;
 END_RCPP
@@ -69,13 +69,13 @@ BEGIN_RCPP
 END_RCPP
 }
 // delta
-IntegerMatrix delta(NumericVector& x, NumericVector& y);
+IntegerMatrix delta(NumericVector x, NumericVector y);
 RcppExport SEXP _CRFparallel_delta(SEXP xSEXP, SEXP ySEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< NumericVector& >::type x(xSEXP);
-    Rcpp::traits::input_parameter< NumericVector& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type x(xSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type y(ySEXP);
     rcpp_result_gen = Rcpp::wrap(delta(x, y));
     return rcpp_result_gen;
 END_RCPP
@@ -105,30 +105,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::mat& >::type X1(X1SEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type X2(X2SEXP);
     rcpp_result_gen = Rcpp::wrap(gradient_fast(x, datalist, X1, X2));
-    return rcpp_result_gen;
-END_RCPP
-}
-// gradientPoly
-NumericVector gradientPoly(const NumericVector& riskset1, const NumericVector& riskset2, const NumericVector& logtheta1, const NumericVector& logtheta2, const Rcpp::List& deriv, const int& df, const NumericVector& delta1, const NumericVector& delta2, const NumericVector& I1, const NumericVector& I2, const NumericVector& I3, const NumericVector& I4, const NumericVector& I5, const NumericVector& I6);
-RcppExport SEXP _CRFparallel_gradientPoly(SEXP riskset1SEXP, SEXP riskset2SEXP, SEXP logtheta1SEXP, SEXP logtheta2SEXP, SEXP derivSEXP, SEXP dfSEXP, SEXP delta1SEXP, SEXP delta2SEXP, SEXP I1SEXP, SEXP I2SEXP, SEXP I3SEXP, SEXP I4SEXP, SEXP I5SEXP, SEXP I6SEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const NumericVector& >::type riskset1(riskset1SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type riskset2(riskset2SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type logtheta1(logtheta1SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type logtheta2(logtheta2SEXP);
-    Rcpp::traits::input_parameter< const Rcpp::List& >::type deriv(derivSEXP);
-    Rcpp::traits::input_parameter< const int& >::type df(dfSEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type delta1(delta1SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type delta2(delta2SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type I1(I1SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type I2(I2SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type I3(I3SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type I4(I4SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type I5(I5SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type I6(I6SEXP);
-    rcpp_result_gen = Rcpp::wrap(gradientPoly(riskset1, riskset2, logtheta1, logtheta2, deriv, df, delta1, delta2, I1, I2, I3, I4, I5, I6));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -190,25 +166,32 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// hessianPolyC
-NumericMatrix hessianPolyC(const NumericVector& riskset1, const NumericVector& riskset2, const NumericVector& logtheta1, const NumericVector& logtheta2, const Rcpp::List& deriv, const int& df, const NumericVector& delta1, const NumericVector& delta2, const NumericVector& I1, const NumericVector& I2, const NumericVector& I3, const NumericVector& I4);
-RcppExport SEXP _CRFparallel_hessianPolyC(SEXP riskset1SEXP, SEXP riskset2SEXP, SEXP logtheta1SEXP, SEXP logtheta2SEXP, SEXP derivSEXP, SEXP dfSEXP, SEXP delta1SEXP, SEXP delta2SEXP, SEXP I1SEXP, SEXP I2SEXP, SEXP I3SEXP, SEXP I4SEXP) {
+// gradient_poly_fast
+arma::vec gradient_poly_fast(arma::colvec& x, const Rcpp::List& datalist, const arma::mat& X1, const arma::mat& X2);
+RcppExport SEXP _CRFparallel_gradient_poly_fast(SEXP xSEXP, SEXP datalistSEXP, SEXP X1SEXP, SEXP X2SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const NumericVector& >::type riskset1(riskset1SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type riskset2(riskset2SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type logtheta1(logtheta1SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type logtheta2(logtheta2SEXP);
-    Rcpp::traits::input_parameter< const Rcpp::List& >::type deriv(derivSEXP);
-    Rcpp::traits::input_parameter< const int& >::type df(dfSEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type delta1(delta1SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type delta2(delta2SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type I1(I1SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type I2(I2SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type I3(I3SEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type I4(I4SEXP);
-    rcpp_result_gen = Rcpp::wrap(hessianPolyC(riskset1, riskset2, logtheta1, logtheta2, deriv, df, delta1, delta2, I1, I2, I3, I4));
+    Rcpp::traits::input_parameter< arma::colvec& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type datalist(datalistSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type X1(X1SEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type X2(X2SEXP);
+    rcpp_result_gen = Rcpp::wrap(gradient_poly_fast(x, datalist, X1, X2));
+    return rcpp_result_gen;
+END_RCPP
+}
+// hessian_poly_batched_parallel
+arma::mat hessian_poly_batched_parallel(arma::colvec& x, const Rcpp::List& datalist, const arma::mat& X1, const arma::mat& X2, int batch_size);
+RcppExport SEXP _CRFparallel_hessian_poly_batched_parallel(SEXP xSEXP, SEXP datalistSEXP, SEXP X1SEXP, SEXP X2SEXP, SEXP batch_sizeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::colvec& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type datalist(datalistSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type X1(X1SEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type X2(X2SEXP);
+    Rcpp::traits::input_parameter< int >::type batch_size(batch_sizeSEXP);
+    rcpp_result_gen = Rcpp::wrap(hessian_poly_batched_parallel(x, datalist, X1, X2, batch_size));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -222,12 +205,12 @@ static const R_CallMethodDef CallEntries[] = {
     {"_CRFparallel_delta", (DL_FUNC) &_CRFparallel_delta, 2},
     {"_CRFparallel_loglikC", (DL_FUNC) &_CRFparallel_loglikC, 4},
     {"_CRFparallel_gradient_fast", (DL_FUNC) &_CRFparallel_gradient_fast, 4},
-    {"_CRFparallel_gradientPoly", (DL_FUNC) &_CRFparallel_gradientPoly, 14},
     {"_CRFparallel_hessian_fast", (DL_FUNC) &_CRFparallel_hessian_fast, 4},
     {"_CRFparallel_hessian_fast_efficient", (DL_FUNC) &_CRFparallel_hessian_fast_efficient, 4},
     {"_CRFparallel_hessian_fast_batched", (DL_FUNC) &_CRFparallel_hessian_fast_batched, 5},
     {"_CRFparallel_hessian_fast_batched_parallel", (DL_FUNC) &_CRFparallel_hessian_fast_batched_parallel, 5},
-    {"_CRFparallel_hessianPolyC", (DL_FUNC) &_CRFparallel_hessianPolyC, 12},
+    {"_CRFparallel_gradient_poly_fast", (DL_FUNC) &_CRFparallel_gradient_poly_fast, 4},
+    {"_CRFparallel_hessian_poly_batched_parallel", (DL_FUNC) &_CRFparallel_hessian_poly_batched_parallel, 5},
     {NULL, NULL, 0}
 };
 

@@ -33,10 +33,6 @@ gradient_fast <- function(x, datalist, X1, X2) {
     .Call(`_CRFparallel_gradient_fast`, x, datalist, X1, X2)
 }
 
-gradientPoly <- function(riskset1, riskset2, logtheta1, logtheta2, deriv, df, delta1, delta2, I1, I2, I3, I4, I5, I6) {
-    .Call(`_CRFparallel_gradientPoly`, riskset1, riskset2, logtheta1, logtheta2, deriv, df, delta1, delta2, I1, I2, I3, I4, I5, I6)
-}
-
 hessian_fast <- function(x, datalist, X1, X2) {
     .Call(`_CRFparallel_hessian_fast`, x, datalist, X1, X2)
 }
@@ -53,7 +49,11 @@ hessian_fast_batched_parallel <- function(x, datalist, X1, X2, batch_size = 1000
     .Call(`_CRFparallel_hessian_fast_batched_parallel`, x, datalist, X1, X2, batch_size)
 }
 
-hessianPolyC <- function(riskset1, riskset2, logtheta1, logtheta2, deriv, df, delta1, delta2, I1, I2, I3, I4) {
-    .Call(`_CRFparallel_hessianPolyC`, riskset1, riskset2, logtheta1, logtheta2, deriv, df, delta1, delta2, I1, I2, I3, I4)
+gradient_poly_fast <- function(x, datalist, X1, X2) {
+    .Call(`_CRFparallel_gradient_poly_fast`, x, datalist, X1, X2)
+}
+
+hessian_poly_batched_parallel <- function(x, datalist, X1, X2, batch_size = 1000L) {
+    .Call(`_CRFparallel_hessian_poly_batched_parallel`, x, datalist, X1, X2, batch_size)
 }
 
