@@ -167,31 +167,33 @@ BEGIN_RCPP
 END_RCPP
 }
 // gradient_poly_fast
-arma::vec gradient_poly_fast(arma::colvec& x, const Rcpp::List& datalist, const arma::mat& X1, const arma::mat& X2);
-RcppExport SEXP _CRFparallel_gradient_poly_fast(SEXP xSEXP, SEXP datalistSEXP, SEXP X1SEXP, SEXP X2SEXP) {
+arma::vec gradient_poly_fast(arma::colvec& x, const Rcpp::List& datalist, const arma::uvec& keep_idx, const arma::mat& X1, const arma::mat& X2);
+RcppExport SEXP _CRFparallel_gradient_poly_fast(SEXP xSEXP, SEXP datalistSEXP, SEXP keep_idxSEXP, SEXP X1SEXP, SEXP X2SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< arma::colvec& >::type x(xSEXP);
     Rcpp::traits::input_parameter< const Rcpp::List& >::type datalist(datalistSEXP);
+    Rcpp::traits::input_parameter< const arma::uvec& >::type keep_idx(keep_idxSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type X1(X1SEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type X2(X2SEXP);
-    rcpp_result_gen = Rcpp::wrap(gradient_poly_fast(x, datalist, X1, X2));
+    rcpp_result_gen = Rcpp::wrap(gradient_poly_fast(x, datalist, keep_idx, X1, X2));
     return rcpp_result_gen;
 END_RCPP
 }
 // hessian_poly_batched_parallel
-arma::mat hessian_poly_batched_parallel(arma::colvec& x, const Rcpp::List& datalist, const arma::mat& X1, const arma::mat& X2, int batch_size);
-RcppExport SEXP _CRFparallel_hessian_poly_batched_parallel(SEXP xSEXP, SEXP datalistSEXP, SEXP X1SEXP, SEXP X2SEXP, SEXP batch_sizeSEXP) {
+arma::mat hessian_poly_batched_parallel(arma::colvec& x, const Rcpp::List& datalist, const arma::uvec& keep_idx, const arma::mat& X1, const arma::mat& X2, int batch_size);
+RcppExport SEXP _CRFparallel_hessian_poly_batched_parallel(SEXP xSEXP, SEXP datalistSEXP, SEXP keep_idxSEXP, SEXP X1SEXP, SEXP X2SEXP, SEXP batch_sizeSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< arma::colvec& >::type x(xSEXP);
     Rcpp::traits::input_parameter< const Rcpp::List& >::type datalist(datalistSEXP);
+    Rcpp::traits::input_parameter< const arma::uvec& >::type keep_idx(keep_idxSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type X1(X1SEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type X2(X2SEXP);
     Rcpp::traits::input_parameter< int >::type batch_size(batch_sizeSEXP);
-    rcpp_result_gen = Rcpp::wrap(hessian_poly_batched_parallel(x, datalist, X1, X2, batch_size));
+    rcpp_result_gen = Rcpp::wrap(hessian_poly_batched_parallel(x, datalist, keep_idx, X1, X2, batch_size));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -209,8 +211,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_CRFparallel_hessian_fast_efficient", (DL_FUNC) &_CRFparallel_hessian_fast_efficient, 4},
     {"_CRFparallel_hessian_fast_batched", (DL_FUNC) &_CRFparallel_hessian_fast_batched, 5},
     {"_CRFparallel_hessian_fast_batched_parallel", (DL_FUNC) &_CRFparallel_hessian_fast_batched_parallel, 5},
-    {"_CRFparallel_gradient_poly_fast", (DL_FUNC) &_CRFparallel_gradient_poly_fast, 4},
-    {"_CRFparallel_hessian_poly_batched_parallel", (DL_FUNC) &_CRFparallel_hessian_poly_batched_parallel, 5},
+    {"_CRFparallel_gradient_poly_fast", (DL_FUNC) &_CRFparallel_gradient_poly_fast, 5},
+    {"_CRFparallel_hessian_poly_batched_parallel", (DL_FUNC) &_CRFparallel_hessian_poly_batched_parallel, 6},
     {NULL, NULL, 0}
 };
 

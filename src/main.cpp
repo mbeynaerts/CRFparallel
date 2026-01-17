@@ -551,6 +551,7 @@ arma::mat logtheta_poly(arma::vec& beta,
 // [[Rcpp::export]]
 arma::vec gradient_poly_fast(arma::colvec& x,
                              const Rcpp::List& datalist,
+                             const arma::uvec& keep_idx,
                              const arma::mat &X1,
                              const arma::mat &X2) {
   
@@ -597,12 +598,13 @@ arma::vec gradient_poly_fast(arma::colvec& x,
   arma::mat grad_mat = -(X1.t() * W1.t() * X2) - (X1.t() * W2 * X2);
   
   // 5. Return as a vector
-  return arma::vectorise(grad_mat);
+  return grad_mat.elem(keep_idx);
 }
 
 // [[Rcpp::export]]
 arma::mat hessian_poly_batched_parallel(arma::colvec& x, 
                                         const Rcpp::List& datalist,
+                                        const arma::uvec& keep_idx,
                                         const arma::mat& X1,
                                         const arma::mat& X2,
                                         int batch_size = 1000) {
@@ -650,6 +652,6 @@ arma::mat hessian_poly_batched_parallel(arma::colvec& x,
   
   arma::mat H = worker1.local_H + worker2.local_H;
 
-  return H;
+  return H.submat(keep_idx, keep_idx);
 
 }

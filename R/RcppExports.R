@@ -49,11 +49,11 @@ hessian_fast_batched_parallel <- function(x, datalist, X1, X2, batch_size = 1000
     .Call(`_CRFparallel_hessian_fast_batched_parallel`, x, datalist, X1, X2, batch_size)
 }
 
-gradient_poly_fast <- function(x, datalist, X1, X2) {
-    .Call(`_CRFparallel_gradient_poly_fast`, x, datalist, X1, X2)
+gradient_poly_fast <- function(x, datalist, keep_idx, X1, X2) {
+    .Call(`_CRFparallel_gradient_poly_fast`, x, datalist, keep_idx, X1, X2)
 }
 
-hessian_poly_batched_parallel <- function(x, datalist, X1, X2, batch_size = 1000L) {
-    .Call(`_CRFparallel_hessian_poly_batched_parallel`, x, datalist, X1, X2, batch_size)
+hessian_poly_batched_parallel <- function(x, datalist, keep_idx, X1, X2, batch_size = 1000L) {
+    .Call(`_CRFparallel_hessian_poly_batched_parallel`, x, datalist, keep_idx, X1, X2, batch_size)
 }
 

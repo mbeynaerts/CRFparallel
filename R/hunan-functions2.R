@@ -77,17 +77,8 @@ theta.mix <- function(t1, t2, w = c(0.2,0.4,0.4), alpha = c(3,5,1.5), margin = "
   return(CRF)
 
 }
-polynomial <- function(t1,t2, coef.vec, logCRF = TRUE) {
 
-  logtheta <- coef.vec[1] + coef.vec[2]*t1 + coef.vec[3]*t2 +
-    coef.vec[4]*t1^2 + coef.vec[5]*t2^2 + coef.vec[6]*t1*t2 +
-    coef.vec[7]*(t1^2)*t2 + coef.vec[8]*t1*(t2^2) +
-    coef.vec[9]*t1^3 + coef.vec[10]*t2^3
 
-  if (logCRF) return(logtheta)
-  else return(exp(logtheta))
-
-}
 
 WoodSpline <- function(t, dim, degree = 3, type = "ps", quantile = FALSE, scale = TRUE, repara = TRUE, m2 = degree-1, knot.margin = 0.001) {
 

@@ -1,9 +1,44 @@
 
+polynomial <- function(t1,t2, coef.vec, logCRF = TRUE) {
+  
+  logtheta <- coef.vec[1] + coef.vec[2]*t1 + coef.vec[3]*t2 +
+    coef.vec[4]*t1^2 + coef.vec[5]*t2^2 + coef.vec[6]*t1*t2 +
+    coef.vec[7]*(t1^2)*t2 + coef.vec[8]*t1*(t2^2) +
+    coef.vec[9]*t1^3 + coef.vec[10]*t2^3
+  
+  if (logCRF) return(logtheta)
+  else return(exp(logtheta))
+  
+}
 
-poly.fit <- function (beta, X1, X2, datalist) {
+keep_indices <- function(poly_degree = 3) {
+  dim_mat <- poly_degree + 1
+  
+  # Create a dummy matrix to find the indices
+  # We use column-major order to match Armadillo/R defaults
+  dummy_mat <- matrix(0, nrow = dim_mat, ncol = dim_mat)
+  keep_indices <- c()
+  
+  k <- 0
+  for (j in 1:dim_mat) {
+    for (i in 1:dim_mat) {
+      # Adjust for R's 1-based indexing: (i-1) + (j-1) <= poly_order
+      if ((i - 1) + (j - 1) <= poly_degree) {
+        # This is the linear index (0-based for C++)
+        keep_indices <- c(keep_indices, k)
+      }
+      k <- k + 1
+    }
+  }
+  
+  return(keep_indices)
+}
+
+poly.fit <- function (beta, X1, X2, datalist, idx) {
   
   gradient <- gradient_poly_fast(beta,
                                  datalist,
+                                 idx,
                                  X1,
                                  X2) # gradientC returns vector of derivatives of -loglik
   
@@ -52,16 +87,17 @@ poly.fit <- function (beta, X1, X2, datalist) {
   
 }
 
-HessianPoly <- function(beta, X1, X2, datalist) {
+
+
+HessianPoly <- function(beta, X1, X2, datalist, idx) {
   
-  hessian <- hessian_poly_batched_parallel(beta, X1, X2, datalist)
+  hessian <- hessian_poly_batched_parallel(beta, datalist, idx, logtheta, X1, X2)
   return(hessian)
 }
 
-
 EstimatePoly <- function(start = rep(0,10), datalist, control = nleqslv.control(), ncores = 1) {
-  RcppParallel::setThreadOptions(numThreads = ncores)
   
+  RcppParallel::setThreadOptions(numThreads = ncores)
   
   X1 <- cbind(1,
               datalist$X[,1],
@@ -72,8 +108,10 @@ EstimatePoly <- function(start = rep(0,10), datalist, control = nleqslv.control(
               datalist$X[,2]^2,
               datalist$X[,2]^3)
   
+  idx <- keep_indices(poly_degree = 3)
+  
   beta <- nleqslv::nleqslv(x = start, fn = poly.fit, jac = HessianPoly,
-                           method = control$method, global = control$global, datalist = datalist, X1 = X1, X2 = X2)
+                           method = control$method, global = control$global, idx = idx, datalist = datalist, X1 = X1, X2 = X2)
   
   V <- HessianPoly(beta$x, datalist, deriv)
   
