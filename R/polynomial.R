@@ -91,7 +91,7 @@ poly.fit <- function (beta, X1, X2, datalist, idx) {
 
 HessianPoly <- function(beta, X1, X2, datalist, idx) {
   
-  hessian <- hessian_poly_batched_parallel(beta, datalist, idx, logtheta, X1, X2)
+  hessian <- hessian_poly_batched_parallel(beta, datalist, idx, X1, X2)
   return(hessian)
 }
 
