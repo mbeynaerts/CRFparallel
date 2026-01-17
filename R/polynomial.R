@@ -113,7 +113,7 @@ EstimatePoly <- function(start = rep(0,10), datalist, control = nleqslv.control(
   beta <- nleqslv::nleqslv(x = start, fn = poly.fit, jac = HessianPoly,
                            method = control$method, global = control$global, idx = idx, datalist = datalist, X1 = X1, X2 = X2)
   
-  V <- HessianPoly(beta$x, datalist, deriv)
+  V <- HessianPoly(beta$x, X1 = X1, X2 = X2, datalist = datalist, idx = idx)
   
   RcppParallel::setThreadOptions(numThreads = ncores)
   
