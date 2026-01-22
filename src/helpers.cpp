@@ -106,7 +106,8 @@ IntegerMatrix indequal(NumericVector x) {
   }
   return elem;
 }
-// // [[Rcpp::export]]
+
+
 // IntegerMatrix risksetC(NumericVector x, NumericVector y) {
 //   
 //   std::size_t n = x.size();
