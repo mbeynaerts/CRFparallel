@@ -1,24 +1,48 @@
+polynomial <- function(t1, t2, coef.vec, logCRF = TRUE) {
+  logtheta <- coef.vec[1] +
+    coef.vec[2] * t1 +
+    coef.vec[3] * t2 +
+    coef.vec[4] * t1^2 +
+    coef.vec[5] * t2^2 +
+    coef.vec[6] * t1 * t2 +
+    coef.vec[7] * (t1^2) * t2 +
+    coef.vec[8] * t1 * (t2^2) +
+    coef.vec[9] * t1^3 +
+    coef.vec[10] * t2^3
 
-polynomial <- function(t1,t2, coef.vec, logCRF = TRUE) {
-  
-  logtheta <- coef.vec[1] + coef.vec[2]*t1 + coef.vec[3]*t2 +
-    coef.vec[4]*t1^2 + coef.vec[5]*t2^2 + coef.vec[6]*t1*t2 +
-    coef.vec[7]*(t1^2)*t2 + coef.vec[8]*t1*(t2^2) +
-    coef.vec[9]*t1^3 + coef.vec[10]*t2^3
-  
-  if (logCRF) return(logtheta)
-  else return(exp(logtheta))
-  
+  if (logCRF) {
+    return(logtheta)
+  } else {
+    return(exp(logtheta))
+  }
+}
+
+Poly.predict <- function(t1, t2, fit, logCRF = TRUE) {
+  X1 <- cbind(1, t1, t1^2, t1^3)
+  X2 <- cbind(1, t2, t2^2, t2^3)
+
+  ord <- fit$degree + 1
+
+  beta <- matrix(0.0, nrow = ord, ncol = ord)
+  beta[fit$idx] <- fit$beta
+
+  logtheta <- X1 %*% beta %*% t(X2)
+
+  if (logCRF) {
+    return(logtheta)
+  } else {
+    return(exp(logtheta))
+  }
 }
 
 keep_indices <- function(poly_degree = 3) {
   dim_mat <- poly_degree + 1
-  
+
   # Create a dummy matrix to find the indices
   # We use column-major order to match Armadillo/R defaults
   dummy_mat <- matrix(0, nrow = dim_mat, ncol = dim_mat)
   keep_indices <- c()
-  
+
   k <- 0
   for (j in 1:dim_mat) {
     for (i in 1:dim_mat) {
@@ -30,21 +54,17 @@ keep_indices <- function(poly_degree = 3) {
       k <- k + 1
     }
   }
-  
+
+  # Output: indices of coefficients to keep in the (poly_degree+1) x (poly_degree+1) coefficient matrix
+  # These indices are C++ indices, for R use keep_indices+1
   return(keep_indices)
 }
 
-poly.fit <- function (beta, X1, X2, datalist, idx) {
-  
-  gradient <- gradient_poly_fast(beta,
-                                 datalist,
-                                 idx,
-                                 X1,
-                                 X2) # gradientC returns vector of derivatives of -loglik
-  
+poly.fit <- function(beta, X1, X2, datalist, idx) {
+  gradient <- gradient_poly_fast(beta, datalist, idx, X1, X2) # gradientC returns vector of derivatives of -loglik
+
   return(as.vector(gradient))
-  
-  
+
   # logtheta1 <- t(logtheta2)
   #
   # N1 <- t(datalist$riskset)
@@ -84,39 +104,43 @@ poly.fit <- function (beta, X1, X2, datalist, idx) {
   #               I1 = t(datalist$I2), I2 = t(datalist$I1), I3 = datalist$I6)
   #
   #   return(-L1-L2)
-  
 }
 
 
-
 HessianPoly <- function(beta, X1, X2, datalist, idx) {
-  
   hessian <- hessian_poly_batched_parallel(beta, datalist, idx, X1, X2)
   return(hessian)
 }
 
-EstimatePoly <- function(start = rep(0,10), datalist, control = nleqslv.control(), ncores = 1) {
-  
+EstimatePoly <- function(
+  start = rep(0, 10),
+  degree = 3,
+  restrict_degree = 3,
+  datalist,
+  control = nleqslv.control(),
+  ncores = 1
+) {
   RcppParallel::setThreadOptions(numThreads = ncores)
-  
-  X1 <- cbind(1,
-              datalist$X[,1],
-              datalist$X[,1]^2,
-              datalist$X[,1]^3)
-  X2 <- cbind(1,
-              datalist$X[,2],
-              datalist$X[,2]^2,
-              datalist$X[,2]^3)
-  
-  idx <- keep_indices(poly_degree = 3)
-  
-  beta <- nleqslv::nleqslv(x = start, fn = poly.fit, jac = HessianPoly,
-                           method = control$method, global = control$global, idx = idx, datalist = datalist, X1 = X1, X2 = X2)
-  
+  on.exit(RcppParallel::setThreadOptions(numThreads = 1))
+
+  X1 <- cbind(1, datalist$X[, 1], datalist$X[, 1]^2, datalist$X[, 1]^3)
+  X2 <- cbind(1, datalist$X[, 2], datalist$X[, 2]^2, datalist$X[, 2]^3)
+
+  idx <- keep_indices(poly_degree = restrict_degree)
+
+  beta <- nleqslv::nleqslv(
+    x = start,
+    fn = poly.fit,
+    jac = HessianPoly,
+    method = control$method,
+    global = control$global,
+    idx = idx,
+    datalist = datalist,
+    X1 = X1,
+    X2 = X2
+  )
+
   V <- HessianPoly(beta$x, X1 = X1, X2 = X2, datalist = datalist, idx = idx)
-  
-  RcppParallel::setThreadOptions(numThreads = ncores)
-  
-  return(list(beta = beta$x, vcov = solve(V)))
-  
+
+  return(list(beta = beta$x, vcov = solve(V), degree = degree, idx = idx + 1))
 }
