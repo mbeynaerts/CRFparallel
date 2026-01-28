@@ -69,12 +69,13 @@ theta.mix <- function(
 
 WoodSpline <- function(
   t,
+  delta,
   dim,
   degree = 3,
   type = "ps",
   quantile = FALSE,
   scale = TRUE,
-  repara = TRUE,
+  repara = FALSE,
   m2 = degree - 1,
   knot.margin = 0.001
 ) {
@@ -89,7 +90,7 @@ WoodSpline <- function(
   dx <- (xu - xl) / (nk - 1)
   knots <- seq(xl - dx * degree, xu + dx * degree, length = nk + 2 * degree) # Vector of knots
   if (quantile) {
-    k.int <- quantile(t, probs = seq(0, 1, length = nk))[-c(1, nk)]
+    k.int <- quantile(t[delta == 1], probs = seq(0, 1, length = nk))[-c(1, nk)]
     knots[(degree + 2):(length(knots) - (degree + 1))] <- k.int
   }
 
@@ -152,11 +153,13 @@ WoodSpline <- function(
     M1 <- M2 <- c()
     M <- diff(diag(dim))
 
-    #W1
+    # W1
+    # M1 <- diff(knots[2:(length(knots) - 1)], lag = 3) #Alternative way to compute M1 and M2
     for (i in 1:(dim - 1)) {
       M1[i] <- knots[degree + 1 + i] - knots[i + 1]
     }
     # W2
+    # M2 <- diff(knots[3:(length(knots) - 2)], lag = 2)
     for (i in 1:(dim - 2)) {
       M2[i] <- knots[degree + 1 + i] - knots[i + 2]
     }
@@ -207,8 +210,9 @@ WoodSpline <- function(
   return(list(X = X, knots = knots, S = S, D = D1, S.scale = maS, XP = XP))
 }
 
-# See Reiss et al. (2014)
+
 WoodPenalty <- function(object1, object2) {
+  # See Reiss et al. (2014) for details on the construction of the penalty matrices
   df1 <- ncol(object1$X)
   df2 <- ncol(object2$X)
 
@@ -749,6 +753,7 @@ PrepareData <- function(t1, t2, cens1, cens2, ncores = 1) {
 
   return(list(
     X = X,
+    delta = delta,
     idxN1 = idxN1 - 1, # C++ indexing (starts at 0)
     idxN2 = idxN2 - 1, # C++ indexing (starts at 0)
     riskset1 = N1[idxN1],
@@ -852,7 +857,7 @@ EstimatePenal2 <- function(
   # weights = NULL,
   type = "ps",
   quantile = FALSE,
-  scale = FALSE,
+  scale = TRUE,
   repara = FALSE,
   step.control = FALSE,
   control = efs.control(),
@@ -873,6 +878,7 @@ EstimatePenal2 <- function(
 
   obj1 <- WoodSpline(
     t = datalist$X[, 1],
+    delta = datalist$delta[, 1],
     dim = dim,
     degree = degree,
     type = type,
@@ -883,6 +889,7 @@ EstimatePenal2 <- function(
   )
   obj2 <- WoodSpline(
     t = datalist$X[, 2],
+    delta = datalist$delta[, 2],
     dim = dim,
     degree = degree,
     type = type,
