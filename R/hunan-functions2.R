@@ -95,7 +95,7 @@ WoodSpline <- function(
   dx <- (xu - xl) / (nk - 1)
   knots <- seq(xl - dx * degree, xu + dx * degree, length = nk + 2 * degree) # Vector of knots
   if (quantile) {
-    k.int <- quantile(t[delta == 1], probs = seq(0, 1, length = nk))[-c(1, nk)]
+    k.int <- quantile(t, probs = seq(0, 1, length = nk))[-c(1, nk)]
     knots[(degree + 2):(length(knots) - (degree + 1))] <- k.int
   }
 
