@@ -76,12 +76,17 @@ WoodSpline <- function(
   quantile = FALSE,
   scale = TRUE,
   repara = FALSE,
+  observed.region = FALSE,
   m2 = degree - 1,
   knot.margin = 0.001
 ) {
   # Create knot sequence for spline ----
   nk <- dim - degree + 1 # Number of "interior" knots (internal + boundary)
 
+  # Make sure knot placement is within observed region
+  if (observed.region) {
+    t <- t[delta == 1]
+  }
   xl <- min(t)
   xu <- max(t)
   xr <- xu - xl
@@ -859,6 +864,7 @@ EstimatePenal2 <- function(
   quantile = FALSE,
   scale = TRUE,
   repara = FALSE,
+  observed.region = FALSE,
   step.control = FALSE,
   control = efs.control(),
   nl.control = nleqslv.control(),
@@ -884,6 +890,7 @@ EstimatePenal2 <- function(
     type = type,
     scale = scale,
     repara = repara,
+    observed.region = observed.region,
     quantile = quantile,
     knot.margin = control$knot.margin
   )
@@ -895,6 +902,7 @@ EstimatePenal2 <- function(
     type = type,
     scale = scale,
     repara = repara,
+    observed.region = observed.region,
     quantile = quantile,
     knot.margin = control$knot.margin
   )
