@@ -2,16 +2,12 @@ get_km <- function(object) {
   stopifnot(inherits(object, "biSurv"))
   stopifnot(isTRUE(attr(object, "bernstein")))
 
-  t1 <- object$t1
-  t2 <- object$t2
-  c <- object$c
-  event1 <- object$event1
-  event2 <- object$event2
-  event_c <- object$eventc
-
-  # Calculate the censoring time and event indicator for the combined censoring variable
-  c <- pmax(t1, t2)
-  event_c <- 1 - event1 * event2
+  t1 <- object[, "time1"]
+  t2 <- object[, "time2"]
+  c <- object[, "c"]
+  event1 <- object[, "event1"]
+  event2 <- object[, "event2"]
+  event_c <- object[, "eventc"]
 
   km1 <- survival::survfit(survival::Surv(t1, event1) ~ 1)
   km2 <- survival::survfit(survival::Surv(t2, event2) ~ 1)
