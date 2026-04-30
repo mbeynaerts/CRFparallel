@@ -11,6 +11,7 @@ CRFfit.default <- function(x, ...) {
   )
 }
 
+# TODO - Add Bernstein method
 CRFfit.formula <- function(
   formula,
   data,
@@ -26,20 +27,29 @@ CRFfit.formula <- function(
   control.default <- switch(
     method,
     "spline" = spline.control(),
-    "polynomial" = polynomial.control()
+    "polynomial" = polynomial.control(),
+    "bernstein" = bernstein.control()
   )
   control <- modifyList(control.default, control)
 
   # Initiate and update nleqslv parameters
   nleqslv.control <- modifyList(nleqslv.control(), nleqslv.control)
 
-  data.parsed <- model.frame(formula = formula, data = data)
-  datalist <- prepare_data(
-    data.parsed$time1,
-    data.parsed$time2,
-    data.parsed$event1,
-    data.parsed$event2
-  )
+  mf <- model.frame(formula = formula, data = data)
+  y <- model.response(mf)
+
+  stopifnot(inherits(y, "biSurv"))
+
+  if (method == "bernstein") {
+    stopifnot(inherits(y, "biSurvBern")) # Check whether data is suitable for Bernstein estimation
+  } else {
+    datalist <- prepare_data(
+      y[, "time1"],
+      y[, "time2"],
+      y[, "event1"],
+      y[, "event2"]
+    )
+  }
 
   # Fit model based on specified method
   if (method == "spline") {
@@ -51,14 +61,14 @@ CRFfit.formula <- function(
       fs.control = fs.control,
       nleqslv.control = nleqslv.control
     )
-    fit$model <- data.parsed
+    fit$model <- y
   } else if (method == "polynomial") {
     fit <- estimate_poly(
       datalist = datalist,
       nl.conrol = nleqslv.control,
       poly.control = control
     )
-    fit$model <- data.parsed
+    fit$model <- y
   }
 
   return(fit)
