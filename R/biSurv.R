@@ -3,13 +3,6 @@ biSurv <- function(time1, time2, event1, event2 = NULL) {
     stop("Must have a time argument.")
   }
 
-  bernstein <- FALSE
-
-  if (is.null(event2)) {
-    event1 <- event2
-    bernstein <- TRUE
-  }
-
   if (inherits(time1, "difftime")) {
     time1 <- unclass(time1)
   }
@@ -80,9 +73,11 @@ biSurv <- function(time1, time2, event1, event2 = NULL) {
     stop("Event variable must be numeric, logical or factor.")
   }
 
-  if (all.equal(event1, event2)) {
-    bernstein <- TRUE
-  }
+  # Check for univariate censoring to allow for bernstein estimation
+  bernstein <- identical(
+    (event1 == 0 & event2 == 0),
+    (time1 == time2)
+  )
 
   ss <- cbind(time1, time2, event1, event2)
   class(ss) <- "biSurv"
