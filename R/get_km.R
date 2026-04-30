@@ -4,8 +4,10 @@ get_km <- function(object) {
 
   t1 <- object$t1
   t2 <- object$t2
+  c <- object$c
   event1 <- object$event1
   event2 <- object$event2
+  event_c <- object$eventc
 
   # Calculate the censoring time and event indicator for the combined censoring variable
   c <- pmax(t1, t2)
