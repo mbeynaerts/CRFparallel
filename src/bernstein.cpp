@@ -1,5 +1,3 @@
-
-#include "armadillo"
 #include <RcppArmadillo.h>
 #include <RcppParallel.h>
 
