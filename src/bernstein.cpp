@@ -178,19 +178,16 @@ double log_dbinom(int k, int n, double p) {
  * @param tau2    min(S(t2))
  */
 // [[Rcpp::export]]
-arma::mat estimate_copula(arma::mat data, 
-                                  Rcpp::List km1, // KM-estimator S(t1)
-                                  Rcpp::List km2, // KM-estimator S(t2)
-                                  Rcpp::List kmc, // KM-estimator S(status)
+arma::mat estimate_copula(arma::vec &t1,
+                                  arma::vec &t2,
+                                  double max_c,
+                                  Rcpp::List &km1, // KM-estimator S(t1)
+                                  Rcpp::List &km2, // KM-estimator S(t2)
+                                  Rcpp::List &kmc, // KM-estimator S(status)
                                   int m, // Bernstein order
                                   double tau1, // min(S(t1))
                                   double tau2) { // min(S(t1))
   
-  // Extract data from lists
-  arma::vec t1 = data.col(0);
-  arma::vec t2 = data.col(1);
-  arma::vec status = data.col(2);
-  double max_c = arma::max(status);
 
   arma::vec k1t = km1["time"], k1s = km1["surv"];
   arma::vec k2t = km2["time"], k2s = km2["surv"];
