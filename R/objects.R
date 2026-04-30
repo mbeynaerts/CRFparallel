@@ -1,4 +1,3 @@
-# TODO - Implement CRF object "CRFbernstein"
 CRF.object <- function(method = c("spline", "polynomial"), method.args) {
   stopifnot(is.list(method.args))
   method <- match.arg(method)
@@ -38,8 +37,16 @@ CRF.object <- function(method = c("spline", "polynomial"), method.args) {
     object$loglik <- numeric()
     object$reml <- ifelse(method == "spline", numeric(), NA)
     object$model <- data.frame()
+  } else if (method == "bernstein") {
+    # TODO - Implement CRF object "CRFbernstein"
+    class(object) <- "CRFbernstein"
+    object$fitted.values <- numeric()
+    object$m <- method.args$m
+    object$tau <- numeric(length = 2)
   } else {
-    stop("Method not supported. Please choose 'spline' or 'polynomial'.")
+    stop(
+      "Method not supported. Please choose 'spline', 'polynomial' or 'bernstein'."
+    )
   }
 
   return(object)
