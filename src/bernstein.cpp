@@ -223,7 +223,7 @@ arma::mat estimate_copula(arma::vec &t1,
   return copula;
 }
 
-double estimate_bernstein(const double &s1, const double &s2, const int &m,
+double bernstein_estimator(const double &s1, const double &s2, const int &m,
                           const double &tau1, const double &tau2,
                           const arma::mat &copula) {
 
@@ -289,7 +289,7 @@ double estimate_bernstein(const double &s1, const double &s2, const int &m,
 
 
 // [[Rcpp::export]]
-arma::vec estimate_bernstein_vec(const arma::vec& s1, const arma::vec& s2, 
+arma::vec bernstein_estimator_vec(const arma::vec& s1, const arma::vec& s2, 
                                  int m, double tau1, double tau2, 
                                  const arma::mat& copula) {
   int n = s1.n_elem;
