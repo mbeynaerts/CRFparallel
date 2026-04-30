@@ -73,13 +73,19 @@ biSurv <- function(time1, time2, event1, event2 = NULL) {
     stop("Event variable must be numeric, logical or factor.")
   }
 
+  ss <- data.frame(time1, time2, event1, event2)
+
   # Check for univariate censoring to allow for bernstein estimation
   bernstein <- identical(
     (event1 == 0 & event2 == 0),
     (time1 == time2)
   )
 
-  ss <- cbind(time1, time2, event1, event2)
+  if (bernstein) {
+    ss$c <- pmax(ss$time1, ss$time2)
+    ss$eventc <- 1 - event1 * event2
+  }
+
   class(ss) <- "biSurv"
   attr(ss, "bernstein") <- bernstein
 
