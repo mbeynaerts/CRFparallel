@@ -68,7 +68,6 @@ polynomial.control <- function(
   )
 }
 
-# TODO - Implement control for order selection
 bernstein.control <- function(m = 10) {
   list(m = m) # Currently only fixed order until order selection is implemented
 }
