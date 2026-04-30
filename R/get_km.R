@@ -8,7 +8,7 @@ get_km <- function(object) {
   event2 <- object$event2
 
   # Calculate the censoring time and event indicator for the combined censoring variable
-  c <- max(t1, t2)
+  c <- pmax(t1, t2)
   event_c <- 1 - event1 * event2
 
   km1 <- survival::survfit(survival::Surv(t1, event1) ~ 1)
