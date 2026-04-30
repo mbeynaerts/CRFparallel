@@ -88,7 +88,7 @@ biSurv <- function(time1, time2, event1, event2) {
       pmax(time1, time2),
       1 - event1 * event2
     )
-    colnames(ss) <- c("time1", "time2", "event1", "event2", "c", "eventc")
+    colnames(ss) <- c("time1", "time2", "event1", "event2", "timec", "eventc")
     class(ss) <- c("biSurvBern", "biSurv", "matrix")
   } else {
     ss <- cbind(time1, time2, event1, event2)
