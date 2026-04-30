@@ -1,4 +1,4 @@
-biSurv <- function(time1, time2, event1, event2 = NULL) {
+biSurv <- function(time1, time2, event1, event2) {
   if (any(missing(time1), missing(time2))) {
     stop("Must have a time argument.")
   }
@@ -80,9 +80,35 @@ biSurv <- function(time1, time2, event1, event2 = NULL) {
   )
 
   ss <- cbind(time1, time2, event1, event2)
-
-  class(ss) <- "biSurv"
+  colnames(ss) <- c("time1", "time2", "event1", "event2")
+  class(ss) <- c("biSurv", "matrix")
   attr(ss, "bernstein") <- bernstein # TODO - Check whether this works with model.frame() in CRFfit.formula()
 
   return(ss)
+}
+
+# as.biSurv <- function(y) {
+#   if (!inherits(y, "biSurv")) {
+#     y <- as.matrix(y)
+#     class(y) <- c("biSurv", "matrix")
+#   }
+
+#   # restore column names if lost
+#   if (is.null(colnames(y)) || ncol(y) == 4) {
+#     colnames(y) <- c("time1", "time2", "event1", "event2")
+#   }
+
+#   # recompute bernstein (robust!)
+#   attr(y, "bernstein") <- identical(
+#     (y[, 3] == 0 & y[, 4] == 0),
+#     (y[, 1] == y[, 2])
+#   )
+
+#   y
+# }
+
+"[.biSurv" <- function(x, i, j, drop = FALSE) {
+  res <- NextMethod("[")
+  class(res) <- class(x)
+  res
 }
