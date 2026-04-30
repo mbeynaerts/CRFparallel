@@ -79,10 +79,22 @@ biSurv <- function(time1, time2, event1, event2) {
     (time1 == time2)
   )
 
-  ss <- cbind(time1, time2, event1, event2)
-  colnames(ss) <- c("time1", "time2", "event1", "event2")
-  class(ss) <- c("biSurv", "matrix")
-  attr(ss, "bernstein") <- bernstein # TODO - Check whether this works with model.frame() in CRFfit.formula()
+  if (bernstein) {
+    ss <- cbind(
+      time1,
+      time2,
+      event1,
+      event2,
+      pmax(time1, time2),
+      1 - event1 * event2
+    )
+    colnames(ss) <- c("time1", "time2", "event1", "event2", "c", "eventc")
+    class(ss) <- c("biSurvBern", "biSurv", "matrix")
+  } else {
+    ss <- cbind(time1, time2, event1, event2)
+    colnames(ss) <- c("time1", "time2", "event1", "event2")
+    class(ss) <- c("biSurv", "matrix")
+  }
 
   return(ss)
 }
