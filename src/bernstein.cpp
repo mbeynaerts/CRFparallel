@@ -1,4 +1,5 @@
 
+#include "armadillo"
 #include <RcppArmadillo.h>
 #include <RcppParallel.h>
 
@@ -79,6 +80,83 @@ struct copulaWorker : public RcppParallel::Worker {
   }
 };
 
+struct BernsteinWorker : public RcppParallel::Worker {
+
+  // Input
+  const arma::vec& s1_vec;
+  const arma::vec& s2_vec;
+  const arma::mat& copula;
+  const int m;
+  const double tau1;
+  const double tau2;
+  
+  // Output
+  arma::vec& results;
+
+  BernsteinWorker(const arma::vec& s1, const arma::vec& s2, const arma::mat& cop,
+                  int m_val, double t1, double t2, arma::vec& res)
+    : s1_vec(s1), s2_vec(s2), copula(cop), m(m_val), tau1(t1), tau2(t2), results(res) {}
+
+  // log-binomial density
+  double log_dbinom(int k, int n, double p) const {
+    if (p <= 0) return (k == 0) ? 0.0 : -1e100;
+    if (p >= 1) return (k == n) ? 0.0 : -1e100;
+    return R::lchoose(n, k) + k * std::log(p) + (n - k) * std::log(1.0 - p);
+  }
+
+  void operator()(std::size_t begin, std::size_t end) {
+    arma::vec p1(m + 1);
+    arma::vec p2(m + 1);
+    arma::vec p1_acc(m + 1);
+    arma::vec p2_acc(m + 1);
+    double eps = 1e-10;
+
+    for (std::size_t i = begin; i < end; ++i) {
+      // Calculate weights
+      // Note that we clamp w1 and w2 to avoid issues with log(0) in the Bernstein
+      // basis calculations.
+      double w1 = std::clamp((s1_vec[i] - tau1) / (1.0 - tau1), eps, 1.0 - eps);
+      double w2 = std::clamp((s2_vec[i] - tau2) / (1.0 - tau2), eps, 1.0 - eps);
+
+      double inv_w1 = 1.0 / (w1 * (1.0 - w1));
+      double inv_w2 = 1.0 / (w2 * (1.0 - w2));
+
+      for (int k = 0; k <= m; ++k) {
+        double b1 = std::exp(log_dbinom(k, m, w1));
+        double b2 = std::exp(log_dbinom(k, m, w2));
+
+        // Bernstein basis
+        p1(k) = b1;
+        p2(k) = b2;
+        
+        // Derivatives of Bernstein basis
+        p1_acc(k) = b1 * (k - m * w1) * inv_w1;
+        p2_acc(k) = b2 * (k - m * w2) * inv_w2;
+      }
+
+
+      // Use matrix products instead of the original sums in Ömer's R code
+      // sum1 = p1.t() * copula * p2
+      // sum2 = p1_acc.t() * copula * p2
+      // sum3 = p1.t() * copula * p2_acc
+      // sum4 = p1_acc.t() * Chat * p2_acc
+
+      // Pre-calculating Chat * p simplifies each matrix product from O(m^2) to O(m)
+      arma::vec cop_p2 = copula * p2;
+      arma::vec cop_p2_acc = copula * p2_acc;
+
+      // Inner products: O(m)
+      double sum1 = arma::dot(p1, cop_p2);
+      double sum2 = arma::dot(p1_acc, cop_p2);
+      double sum3 = arma::dot(p1, cop_p2_acc);
+      double sum4 = arma::dot(p1_acc, cop_p2_acc);
+
+      // log(CRF)
+      results[i] = std::log(sum1) + std::log(sum4) - std::log(sum2) - std::log(sum3);
+    }
+  }
+};
+
 // Log of binomial density to avoid interfacing with R's dbinom
 double log_dbinom(int k, int n, double p) {
   if (p <= 0)
@@ -88,69 +166,6 @@ double log_dbinom(int k, int n, double p) {
   return std::lgamma(n + 1) - std::lgamma(k + 1) - std::lgamma(n - k + 1) +
          k * std::log(p) + (n - k) * std::log(1.0 - p);
 }
-
-// [[Rcpp::export]]
-double estimate_bernstein(const double &s1, const double &s2, const int &m,
-                          const double &tau1, const double &tau2,
-                          const arma::mat &copula) {
-
-  // s1, s2: estimated survival functions in t1 and t2 (eg. from Kaplan-Meier)
-  // m: Bernstein order
-  // tau1, tau2: min(s1) and min(s2) (ie. the largest observed time point)
-  // Chat: estimated copula function
-
-  // Calculate weights
-  // Note that we clamp w1 and w2 to avoid issues with log(0) in the Bernstein
-  // basis calculations.
-  double eps = 1e-10;
-  double w1 = std::clamp((s1 - tau1) / (1.0 - tau1), eps, 1.0 - eps);
-  double w2 = std::clamp((s2 - tau2) / (1.0 - tau2), eps, 1.0 - eps);
-
-  // double w1 = (s1 - tau1) / (1.0 - tau1);
-  // double w2 = (s2 - tau2) / (1.0 - tau2);
-
-  // Precompute the Bernstein basis vectors (p) and their derivatives (p_acc)
-  arma::vec p1(m + 1);
-  arma::vec p2(m + 1);
-  arma::vec p1_acc(m + 1);
-  arma::vec p2_acc(m + 1);
-
-  // Pre-calculate constants to avoid repeated division
-  double inv_w1 = (1.0 / (w1 * (1.0 - w1)));
-  double inv_w2 = (1.0 / (w2 * (1.0 - w2)));
-
-  for (int k = 0; k <= m; ++k) {
-    // Original R: choose(m, k) * w^k * (1-w)^(m-k)
-    // This is just dbinom(k,m,w) in R
-    // double b1 = R::dbinom(k, m, w1, false);
-    // double b2 = R::dbinom(k, m, w2, false);
-    double b1 = std::exp(log_dbinom(k, m, w1));
-    double b2 = std::exp(log_dbinom(k, m, w2));
-
-    p1(k) = b1;
-    p2(k) = b2;
-    p1_acc(k) = b1 * (k - m * w1) * inv_w1;
-    p2_acc(k) = b2 * (k - m * w2) * inv_w2;
-  }
-
-  // Use matrix products instead of the original sums in Ömer's R code
-  // sum1 = p1' * Chat * p2
-  // sum2 = p1_acc' * Chat * p2
-  // sum3 = p1' * Chat * p2_acc
-  // sum4 = p1_acc' * Chat * p2_acc
-
-  // Pre-calculating Chat * p simplifies each matrix product from O(m^2) to O(m)
-  arma::vec copula_p2 = copula * p2;
-  arma::vec copula_p2_acc = copula * p2_acc;
-
-  double sum1 = arma::as_scalar(p1.t() * copula_p2);
-  double sum2 = arma::as_scalar(p1_acc.t() * copula_p2);
-  double sum3 = arma::as_scalar(p1.t() * copula_p2_acc);
-  double sum4 = arma::as_scalar(p1_acc.t() * copula_p2_acc);
-
-  return (sum1 * sum4) / (sum2 * sum3);
-}
-
 
 
 /**
@@ -211,4 +226,82 @@ arma::mat estimate_copula(arma::mat data,
   RcppParallel::parallelFor(0, m + 1, worker);
 
   return copula;
+}
+
+double estimate_bernstein(const double &s1, const double &s2, const int &m,
+                          const double &tau1, const double &tau2,
+                          const arma::mat &copula) {
+
+  // s1, s2: estimated survival functions in t1 and t2 (eg. from Kaplan-Meier)
+  // m: Bernstein order
+  // tau1, tau2: min(s1) and min(s2) (ie. the largest observed time point)
+  // Chat: estimated copula function
+
+  // Calculate weights
+  // Note that we clamp w1 and w2 to avoid issues with log(0) in the Bernstein
+  // basis calculations.
+  double eps = 1e-10;
+  double w1 = std::clamp((s1 - tau1) / (1.0 - tau1), eps, 1.0 - eps);
+  double w2 = std::clamp((s2 - tau2) / (1.0 - tau2), eps, 1.0 - eps);
+
+  // double w1 = (s1 - tau1) / (1.0 - tau1);
+  // double w2 = (s2 - tau2) / (1.0 - tau2);
+
+  // Bernstein basis
+  arma::vec p1(m + 1);
+  arma::vec p2(m + 1);
+
+  // Derivatives of Bernstein basis
+  arma::vec p1_acc(m + 1);
+  arma::vec p2_acc(m + 1);
+
+  // Pre-calculate constants to avoid repeated division
+  double inv_w1 = (1.0 / (w1 * (1.0 - w1)));
+  double inv_w2 = (1.0 / (w2 * (1.0 - w2)));
+
+  for (int k = 0; k <= m; ++k) {
+    // Original R: choose(m, k) * w^k * (1-w)^(m-k)
+    // This is just dbinom(k,m,w) in R
+    // double b1 = R::dbinom(k, m, w1, false);
+    // double b2 = R::dbinom(k, m, w2, false);
+    double b1 = std::exp(log_dbinom(k, m, w1));
+    double b2 = std::exp(log_dbinom(k, m, w2));
+
+    p1(k) = b1;
+    p2(k) = b2;
+    p1_acc(k) = b1 * (k - m * w1) * inv_w1;
+    p2_acc(k) = b2 * (k - m * w2) * inv_w2;
+  }
+
+  // Use matrix products instead of the original sums in Ömer's R code
+  // sum1 = p1.t() * copula * p2
+  // sum2 = p1_acc.t() * copula * p2
+  // sum3 = p1.t() * copula * p2_acc
+  // sum4 = p1_acc.t() * Chat * p2_acc
+
+  // Pre-calculating Chat * p simplifies each matrix product from O(m^2) to O(m)
+  arma::vec copula_p2 = copula * p2;
+  arma::vec copula_p2_acc = copula * p2_acc;
+
+  double sum1 = arma::as_scalar(p1.t() * copula_p2);
+  double sum2 = arma::as_scalar(p1_acc.t() * copula_p2);
+  double sum3 = arma::as_scalar(p1.t() * copula_p2_acc);
+  double sum4 = arma::as_scalar(p1_acc.t() * copula_p2_acc);
+
+  // return (sum1 * sum4) / (sum2 * sum3);
+  return std::log(sum1) + std::log(sum4) - std::log(sum2) - std::log(sum3);
+}
+
+
+// [[Rcpp::export]]
+arma::vec estimate_bernstein_vec(const arma::vec& s1, const arma::vec& s2, 
+                                 int m, double tau1, double tau2, 
+                                 const arma::mat& copula) {
+  int n = s1.n_elem;
+  arma::vec results(n);
+
+  BernsteinWorker worker(s1, s2, copula, m, tau1, tau2, results);
+  RcppParallel::parallelFor(0, n, worker);
+
+  return results;
 }
