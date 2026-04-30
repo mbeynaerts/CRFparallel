@@ -54,10 +54,106 @@ arma::mat row_kron(const arma::mat& X, const arma::mat& Y) {
     // Compute Kronecker product of row i of X and row i of Y
     arma::rowvec kron_row = arma::kron(X.row(i), Y.row(i));
     Z.row(i) = kron_row;
-  }
-  
+  } 
   return Z;
-  }
+}
+
+// [[Rcpp::export]]
+arma::mat band_chol_cpp(arma::mat B) {
+    // Armadillo's chol() can handle banded matrices if you 
+    // provide the full matrix, but for memory efficiency with
+    // large banded matrices, we use the 'trimatu' or 'trimatl' wrappers.
+    
+    // If B is already in the compact banded format (k x n):
+    // It's often better to reconstruct or use a Sparse matrix if k << n.
+    // However, for a direct port of your logic:
+    
+    arma::mat R;
+    bool success = arma::chol(R, B);
+    
+    if (!success) {
+        Rcpp::stop("Decomposition failed: matrix is not positive definite.");
+    }
+    
+    return R;
+}
+
+// [[Rcpp::export]]
+arma::vec sdiag_cpp(const arma::mat& A, int k = 0) {
+    // Basic bounds checking to match R logic
+    if (k >= static_cast<int>(A.n_cols) || k <= -static_cast<int>(A.n_rows)) {
+        return arma::vec(); // Returns an empty vector
+    }
+    
+    // .diag(k) handles:
+    // k = 0: main diagonal
+    // k > 0: super-diagonals (above main)
+    // k < 0: sub-diagonals (below main)
+    return A.diag(k);
+}
+
+// [[Rcpp::export]]
+arma::mat compute_D1_cpp(const arma::mat& D, const arma::mat& W1, const arma::vec& h, int pord) {
+    int n_h = h.n_elem;
+    int n_D_cols = D.n_cols;
+    int n_D_rows = D.n_rows;
+    
+    // Construct the banded weights matrix B (in compact storage)
+    // We want a matrix of size (pord + 1) x n_D_rows
+    arma::mat B(pord + 1, n_D_rows, arma::fill::zeros);
+    
+    // Leading diagonal logic
+    arma::vec diag_W1 = W1.diag();
+    arma::vec ld0 = arma::vectorise(diag_W1 * h.t()); // length: (pord+1) * n_h
+    
+    // Map ld0 to the global diagonal ld
+    arma::vec ld = arma::zeros<arma::vec>(n_D_rows);
+    for(int i = 0; i < n_h; ++i) {
+        for(int j = 0; j <= pord; ++j) {
+            int global_idx = i * pord + j;
+            if (global_idx < n_D_rows) {
+                ld(global_idx) += diag_W1(j) * h(i);
+            }
+        }
+    }
+    B.row(0) = ld.t();
+
+    // Other diagonals
+    for (int k = 1; k <= pord; ++k) {
+        arma::vec diwk = W1.diag(k);
+        // Fill B.row(k) based on piece-wise quadrature
+        for (int i = 0; i < n_h; ++i) {
+            for (int j = 0; j < diwk.n_elem; ++j) {
+                int global_idx = i * pord + j;
+                if (global_idx < n_D_rows - k) {
+                    B(k, global_idx) = diwk(j) * h(i);
+                }
+            }
+        }
+    }
+
+    // Banded Cholesky Factorization
+    // We use the band_chol_cpp logic here (assuming your LAPACK wrapper is available)
+    // Or use Armadillo's internal routines if B is converted to sparse.
+    arma::mat R = band_chol_cpp(B);
+
+    // Multiply D by the Cholesky factor (Banded matrix multiplication)
+    arma::mat D1 = arma::zeros<arma::mat>(n_D_rows, n_D_cols);
+    
+    // Row 0 scaling
+    D1 = D.each_col() % R.row(0).t();
+    
+    // Off-diagonal contributions
+    for (int k = 1; k <= pord; ++k) {
+        for (int i = 0; i < (n_D_rows - k); ++i) {
+            D1.row(i) += R(k, i) * D.row(i + k);
+        }
+    }
+
+    // S = D1' * D1
+    // return D1.t() * D1;
+    return D1;
+}
 
 // [[Rcpp::export]]
 IntegerMatrix indgreater(NumericVector x) {
@@ -73,7 +169,7 @@ IntegerMatrix indgreater(NumericVector x) {
     }
   }
   return elem;
-  }
+}
 
 // [[Rcpp::export]]
 IntegerMatrix indless(NumericVector x) {
@@ -123,10 +219,10 @@ IntegerMatrix indequal(NumericVector x) {
 // }
 
 // [[Rcpp::export]]
-IntegerMatrix riskset_fast(NumericVector x, NumericVector y) {
+arma::Mat<int> riskset_fast(arma::vec x, arma::vec y) {
   
-  std::size_t n = x.size();
-  IntegerMatrix N(n);
+  std::size_t n = x.n_elem;
+  arma::Mat<int> N(n,n);
 
   // y ranks
   std::vector<std::size_t> y_ord(n);

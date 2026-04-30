@@ -11,6 +11,22 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// estimate_bernstein
+double estimate_bernstein(const double& s1, const double& s2, const int& m, const double& tau1, const double& tau2, const arma::mat& Chat);
+RcppExport SEXP _CRFparallel_estimate_bernstein(SEXP s1SEXP, SEXP s2SEXP, SEXP mSEXP, SEXP tau1SEXP, SEXP tau2SEXP, SEXP ChatSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const double& >::type s1(s1SEXP);
+    Rcpp::traits::input_parameter< const double& >::type s2(s2SEXP);
+    Rcpp::traits::input_parameter< const int& >::type m(mSEXP);
+    Rcpp::traits::input_parameter< const double& >::type tau1(tau1SEXP);
+    Rcpp::traits::input_parameter< const double& >::type tau2(tau2SEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Chat(ChatSEXP);
+    rcpp_result_gen = Rcpp::wrap(estimate_bernstein(s1, s2, m, tau1, tau2, Chat));
+    return rcpp_result_gen;
+END_RCPP
+}
 // row_kron
 arma::mat row_kron(const arma::mat& X, const arma::mat& Y);
 RcppExport SEXP _CRFparallel_row_kron(SEXP XSEXP, SEXP YSEXP) {
@@ -20,6 +36,43 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type Y(YSEXP);
     rcpp_result_gen = Rcpp::wrap(row_kron(X, Y));
+    return rcpp_result_gen;
+END_RCPP
+}
+// band_chol_cpp
+arma::mat band_chol_cpp(arma::mat B);
+RcppExport SEXP _CRFparallel_band_chol_cpp(SEXP BSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type B(BSEXP);
+    rcpp_result_gen = Rcpp::wrap(band_chol_cpp(B));
+    return rcpp_result_gen;
+END_RCPP
+}
+// sdiag_cpp
+arma::vec sdiag_cpp(const arma::mat& A, int k);
+RcppExport SEXP _CRFparallel_sdiag_cpp(SEXP ASEXP, SEXP kSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type A(ASEXP);
+    Rcpp::traits::input_parameter< int >::type k(kSEXP);
+    rcpp_result_gen = Rcpp::wrap(sdiag_cpp(A, k));
+    return rcpp_result_gen;
+END_RCPP
+}
+// compute_D1_cpp
+arma::mat compute_D1_cpp(const arma::mat& D, const arma::mat& W1, const arma::vec& h, int pord);
+RcppExport SEXP _CRFparallel_compute_D1_cpp(SEXP DSEXP, SEXP W1SEXP, SEXP hSEXP, SEXP pordSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type D(DSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type W1(W1SEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type h(hSEXP);
+    Rcpp::traits::input_parameter< int >::type pord(pordSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_D1_cpp(D, W1, h, pord));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -57,13 +110,13 @@ BEGIN_RCPP
 END_RCPP
 }
 // riskset_fast
-IntegerMatrix riskset_fast(NumericVector x, NumericVector y);
+arma::Mat<int> riskset_fast(arma::vec x, arma::vec y);
 RcppExport SEXP _CRFparallel_riskset_fast(SEXP xSEXP, SEXP ySEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< NumericVector >::type x(xSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type y(ySEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type x(xSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type y(ySEXP);
     rcpp_result_gen = Rcpp::wrap(riskset_fast(x, y));
     return rcpp_result_gen;
 END_RCPP
@@ -199,7 +252,11 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_CRFparallel_estimate_bernstein", (DL_FUNC) &_CRFparallel_estimate_bernstein, 6},
     {"_CRFparallel_row_kron", (DL_FUNC) &_CRFparallel_row_kron, 2},
+    {"_CRFparallel_band_chol_cpp", (DL_FUNC) &_CRFparallel_band_chol_cpp, 1},
+    {"_CRFparallel_sdiag_cpp", (DL_FUNC) &_CRFparallel_sdiag_cpp, 2},
+    {"_CRFparallel_compute_D1_cpp", (DL_FUNC) &_CRFparallel_compute_D1_cpp, 4},
     {"_CRFparallel_indgreater", (DL_FUNC) &_CRFparallel_indgreater, 1},
     {"_CRFparallel_indless", (DL_FUNC) &_CRFparallel_indless, 1},
     {"_CRFparallel_indequal", (DL_FUNC) &_CRFparallel_indequal, 1},

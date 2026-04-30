@@ -1,0 +1,2 @@
+Diagnostics:
+  Suppress: "in_class_initializer_non_constant"

@@ -1,41 +1,4 @@
-polynomial <- function(t1, t2, coef.vec, logCRF = TRUE) {
-  logtheta <- coef.vec[1] +
-    coef.vec[2] * t1 +
-    coef.vec[3] * t2 +
-    coef.vec[4] * t1^2 +
-    coef.vec[5] * t2^2 +
-    coef.vec[6] * t1 * t2 +
-    coef.vec[7] * (t1^2) * t2 +
-    coef.vec[8] * t1 * (t2^2) +
-    coef.vec[9] * t1^3 +
-    coef.vec[10] * t2^3
-
-  if (logCRF) {
-    return(logtheta)
-  } else {
-    return(exp(logtheta))
-  }
-}
-
-Poly.predict <- function(t1, t2, fit, logCRF = TRUE) {
-  X1 <- cbind(1, t1, t1^2, t1^3)
-  X2 <- cbind(1, t2, t2^2, t2^3)
-
-  ord <- fit$degree + 1
-
-  beta <- matrix(0.0, nrow = ord, ncol = ord)
-  beta[fit$idx] <- fit$beta
-
-  logtheta <- X1 %*% beta %*% t(X2)
-
-  if (logCRF) {
-    return(logtheta)
-  } else {
-    return(exp(logtheta))
-  }
-}
-
-keep_indices <- function(poly_degree = 3) {
+keep_indices <- function(poly_degree = 3, restrict_degree = 3) {
   dim_mat <- poly_degree + 1
 
   # Create a dummy matrix to find the indices
@@ -47,7 +10,7 @@ keep_indices <- function(poly_degree = 3) {
   for (j in 1:dim_mat) {
     for (i in 1:dim_mat) {
       # Adjust for R's 1-based indexing: (i-1) + (j-1) <= poly_order
-      if ((i - 1) + (j - 1) <= poly_degree) {
+      if ((i - 1) + (j - 1) <= restrict_degree) {
         # This is the linear index (0-based for C++)
         keep_indices <- c(keep_indices, k)
       }
@@ -60,7 +23,7 @@ keep_indices <- function(poly_degree = 3) {
   return(keep_indices)
 }
 
-poly.fit <- function(beta, X1, X2, datalist, idx) {
+gradient.poly <- function(beta, X1, X2, datalist, idx) {
   gradient <- gradient_poly_fast(beta, datalist, idx, X1, X2) # gradientC returns vector of derivatives of -loglik
 
   return(as.vector(gradient))
@@ -106,41 +69,64 @@ poly.fit <- function(beta, X1, X2, datalist, idx) {
   #   return(-L1-L2)
 }
 
-
-HessianPoly <- function(beta, X1, X2, datalist, idx) {
-  hessian <- hessian_poly_batched_parallel(beta, datalist, idx, X1, X2)
-  return(hessian)
+hessian.poly <- function(beta, X1, X2, datalist, idx) {
+  hessian_poly_batched_parallel(beta, datalist, idx, X1, X2)
 }
 
-EstimatePoly <- function(
+estimate_poly <- function(
+  datalist,
   start = rep(0, 10),
   degree = 3,
   restrict_degree = 3,
-  datalist,
-  control = nleqslv.control(),
+  poly.control = polynomial.control(),
+  nl.control = nleqslv.control(),
   ncores = 1
 ) {
   RcppParallel::setThreadOptions(numThreads = ncores)
-  on.exit(RcppParallel::setThreadOptions(numThreads = 1))
+  on.exit(RcppParallel::setThreadOptions(numThreads = 1), add = TRUE)
 
-  X1 <- cbind(1, datalist$X[, 1], datalist$X[, 1]^2, datalist$X[, 1]^3)
-  X2 <- cbind(1, datalist$X[, 2], datalist$X[, 2]^2, datalist$X[, 2]^3)
+  # X1 <- cbind(1, datalist$X[, 1], datalist$X[, 1]^2, datalist$X[, 1]^3)
+  # X2 <- cbind(1, datalist$X[, 2], datalist$X[, 2]^2, datalist$X[, 2]^3)
 
-  idx <- keep_indices(poly_degree = restrict_degree)
+  final <- CRF.object(method = "polynomial", method.args = poly.control)
+  stopifnot(inherits(final, "CRFpoly")) # Check that final is of class CRFpoly
+
+  X1 <- model.matrix(
+    ~ poly(datalist$X[, 1], degree = d, raw = TRUE, simple = TRUE)
+  )
+  X2 <- model.matrix(
+    ~ poly(datalist$X[, 2], degree = d, raw = TRUE, simple = TRUE)
+  )
+
+  idx <- keep_indices(
+    poly_degree = poly_degree,
+    restrict_degree = restrict_degree
+  )
+  final$model.matrix <- row_kron(X1, X2)
+  attr(final$model.matrix, "idx") <- idx + 1
 
   beta <- nleqslv::nleqslv(
     x = start,
-    fn = poly.fit,
-    jac = HessianPoly,
-    method = control$method,
-    global = control$global,
+    fn = gradient.poly,
+    jac = hessian.poly,
+    method = nl.control$method,
+    global = nl.control$global,
     idx = idx,
     datalist = datalist,
     X1 = X1,
     X2 = X2
   )
 
-  V <- HessianPoly(beta$x, X1 = X1, X2 = X2, datalist = datalist, idx = idx)
+  V <- hessian.poly(beta$x, X1 = X1, X2 = X2, datalist = datalist, idx = idx)
 
-  return(list(beta = beta$x, vcov = solve(V), degree = degree, idx = idx + 1))
+  coef.matrix <- matrix(0.0, nrow = degree + 1, ncol = degree + 1)
+  coef.matrix[idx + 1] <- beta$x
+
+  final$fitted.values <- X1 %*% coef.matrix %*% t(X2)
+  final$coefficients <- beta$x
+  final$vcov <- solve(V)
+  final$loglik <- beta$fvec
+
+  # return(list(beta = beta$x, vcov = solve(V), degree = degree, idx = idx + 1))
+  return(final)
 }

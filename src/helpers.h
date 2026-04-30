@@ -1,6 +1,6 @@
 
-# ifndef HELPERS_H
-# define HELPERS_H
+#ifndef HELPERS_H
+#define HELPERS_H
 
 #include <RcppArmadillo.h>
 #include <RcppParallel.h>
@@ -26,22 +26,22 @@ struct Fenwick {
   //   for (++i; i > 0; i -= i & -i)
   //     s += tree[i];
   //   return s;
-  // }
+  // }s
 };
 
 struct riskset_worker : public RcppParallel::Worker {
   
-  RVector<double> x;
+  arma::vec x;
   std::vector<std::size_t> y_rank;
   std::vector<std::size_t> x_ord;
-  RMatrix<int> N;
+  arma::Mat<int> N;
   std::size_t n;
   
-  riskset_worker(NumericVector& x,
+  riskset_worker(arma::vec& x,
                  const std::vector<std::size_t>& y_rank,
                  const std::vector<std::size_t>& x_ord,
-                 IntegerMatrix& N)
-    : x(x), y_rank(y_rank), x_ord(x_ord), N(N), n(x.size()) {}
+                 arma::Mat<int>& N)
+    : x(x), y_rank(y_rank), x_ord(x_ord), N(N), n(x.n_elem) {}
   
   
   void operator() (std::size_t begin, std::size_t end);
@@ -70,15 +70,21 @@ struct riskset_worker : public RcppParallel::Worker {
 // R functions
 arma::mat row_kron(const arma::mat& X, const arma::mat& Y);
 
+arma::mat band_chol_cpp(arma::mat B);
+
+arma::vec sdiag_cpp(const arma::mat& A, int k);
+
+arma::mat compute_D1_cpp(const arma::mat& D, const arma::mat& W1, const arma::vec& h, int pord);
+
 IntegerMatrix indgreater(NumericVector x);
 
 IntegerMatrix indless(NumericVector x);
 
 IntegerMatrix indequal(NumericVector x);
 
-IntegerMatrix riskset_fast(NumericVector x, NumericVector y);
+arma::Mat<int> riskset_fast(arma::vec x, arma::vec y);
 
 IntegerMatrix delta(NumericVector x, NumericVector y);
 
 
-# endif
+#endif
