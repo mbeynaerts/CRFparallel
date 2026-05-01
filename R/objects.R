@@ -10,7 +10,7 @@ CRF.object <- function(method = c("spline", "polynomial"), method.args) {
     object$method <- method
 
     if (method == "spline") {
-      class(object) <- "CRFspline"
+      class(object) <- c("CRFspline", "list")
       object$coefficients <- numeric(length = method.args$dim^2)
       object$knots <- list
       attr(object$coefficients, "names") <- paste0("beta", 1:method.args$dim^2)
@@ -24,7 +24,7 @@ CRF.object <- function(method = c("spline", "polynomial"), method.args) {
       attr(object$method, "quantile") <- method.args$quantile
       attr(object$method, "iterations") <- integer()
     } else if (method == "polynomial") {
-      class(object) <- "CRFpoly"
+      class(object) <- c("CRFpoly", "list")
       l <- (method.args$restrict_degree + 1) *
         (method.args$restrict_degree + 2) /
         2
@@ -39,7 +39,7 @@ CRF.object <- function(method = c("spline", "polynomial"), method.args) {
     object$model <- data.frame()
   } else if (method == "bernstein") {
     # TODO - Implement CRF object "CRFbernstein"
-    class(object) <- "CRFbernstein"
+    class(object) <- c("CRFbernstein", "list")
     object$fitted.values <- numeric()
     object$m <- method.args$m
     object$tau <- numeric(length = 2)
