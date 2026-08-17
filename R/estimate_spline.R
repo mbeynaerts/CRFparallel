@@ -105,6 +105,8 @@ estimate_spline <- function(
       clear = FALSE
     )
   }
+
+  converged <- FALSE
   for (iter in 1:efs.control$maxiter) {
     l0 <- fit$REML
 
@@ -222,10 +224,7 @@ estimate_spline <- function(
         max(abs(diff(score[(iter - 3):iter]))) < efs.control$REML.tol &&
         max.step < efs.control$lambda.tol
     ) {
-      if (progress) {
-        cli::cli_progress_done(result = "done")
-        cli::cli_alert_info("REML not changing")
-      }
+      converged <- TRUE
       break
     }
     # Or break is likelihood does not change
@@ -240,12 +239,17 @@ estimate_spline <- function(
           cli::cli_progress_done(result = "done")
           cli::cli_alert_info("Log-likelihood not changing")
         }
+        converged <- TRUE
         break
       } # if (abs(old.ll-fit$ll)<100*eps*abs(fit$ll))
       old.ll <- fit$ll
     }
 
-    cli::cli_progress_update() # To make sure that the spinner in cli_progress_step works
+    if (progress) {
+      cli::cli_progress_done(
+        result = if (converged) "done" else "failed"
+      )
+    }
   } # End of for loop
 
   # final$coefficients <- fit$beta
