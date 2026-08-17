@@ -7,8 +7,8 @@ test_that("spline control provides initial smoothing parameters", {
 })
 
 test_that("risk sets count observations above both margins", {
-  x <- c(2, 1, 2)
-  y <- c(1, 2, 1)
+  x <- c(4, 1, 3, 2)
+  y <- c(1, 4, 2, 3)
 
   expected <- outer(seq_along(x), seq_along(y), Vectorize(function(j, i) {
     sum(x >= x[j] & y >= y[i])

@@ -222,19 +222,39 @@ IntegerMatrix indequal(NumericVector x) {
 arma::Mat<int> riskset_fast(arma::vec x, arma::vec y) {
   
   std::size_t n = x.n_elem;
-  arma::Mat<int> N(n, n, arma::fill::zeros);
+  arma::Mat<int> N(n,n);
 
-  // ponytail: O(n^3) is fine for current data sizes; replace with a tested
-  // Fenwick implementation if risk-set construction becomes the bottleneck.
-  for (std::size_t j = 0; j < n; j++) {
-    for (std::size_t i = 0; i < n; i++) {
-      for (std::size_t k = 0; k < n; k++) {
-        if (x[k] >= x[j] && y[k] >= y[i]) {
-          N(j, i)++;
-        }
-      }
-    }
-  }
+  // y ranks
+  std::vector<std::size_t> y_ord(n);
+  std::iota(y_ord.begin(), y_ord.end(), 0);
+  std::sort(y_ord.begin(), y_ord.end(),
+            [&](size_t a, size_t b){ return y[a] < y[b]; });
+
+  std::vector<std::size_t> y_rank(n);
+  for (std::size_t i = 0; i < n; i++)
+    y_rank[y_ord[i]] = i;
+
+  // x order descending
+  std::vector<std::size_t> x_ord(n);
+  std::iota(x_ord.begin(), x_ord.end(), 0);
+  std::sort(x_ord.begin(), x_ord.end(),
+            [&](size_t a, size_t b){ return x[a] > x[b]; });
+
+  // Parallel worker
+  riskset_worker w(x, y_rank, x_ord, N);
+  parallelFor(0, n, w);
+
+  // Literal reference implementation; assumes nothing, but is O(n^3).
+  // for (std::size_t j = 0; j < n; j++) {
+  //   for (std::size_t i = 0; i < n; i++) {
+  //     N(j, i) = 0;
+  //     for (std::size_t k = 0; k < n; k++) {
+  //       if (x[k] >= x[j] && y[k] >= y[i]) {
+  //         N(j, i)++;
+  //       }
+  //     }
+  //   }
+  // }
 
   return N;
 }

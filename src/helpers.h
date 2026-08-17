@@ -34,7 +34,7 @@ struct riskset_worker : public RcppParallel::Worker {
   arma::vec x;
   std::vector<std::size_t> y_rank;
   std::vector<std::size_t> x_ord;
-  arma::Mat<int> N;
+  arma::Mat<int>& N;
   std::size_t n;
   
   riskset_worker(arma::vec& x,
