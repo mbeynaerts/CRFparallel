@@ -28,7 +28,7 @@ efsud_fit <- function(
   beta <- estim$x
   if (any(is.na(beta))) {
     estim
-    stop("One of the spline coefficients is NA")
+    cli::cli_abort("One of the spline coefficients is NA")
   }
 
   H <- hessian_spline(
