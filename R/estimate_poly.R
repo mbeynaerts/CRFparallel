@@ -90,7 +90,7 @@ estimate_poly <- function(
     vcov = solve(V),
     coefficients = beta$x,
     loglik = beta$fvec,
-    call = match.call
+    call = match.call()
   )
 
   if (progress) {

@@ -33,7 +33,7 @@ keep_indices <- function(poly_degree = 3, restrict_degree = 3) {
 
   # Output: indices of coefficients to keep in the (poly_degree+1) x (poly_degree+1) coefficient matrix
   # These indices are C++ indices, for R use keep_indices+1
-  return(keep_indices)
+  return(as.integer(keep_indices))
 }
 
 check_knots <- function(knots, type, dim, degree) {

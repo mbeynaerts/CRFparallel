@@ -6,6 +6,17 @@ test_that("spline control provides initial smoothing parameters", {
   expect_identical(CRFparallel::spline.control()$lambda.init, c(1, 1))
 })
 
+test_that("risk sets count observations above both margins", {
+  x <- c(2, 1, 2)
+  y <- c(1, 2, 1)
+
+  expected <- outer(seq_along(x), seq_along(y), Vectorize(function(j, i) {
+    sum(x >= x[j] & y >= y[i])
+  }))
+
+  expect_equal(CRFparallel:::riskset_fast(x, y), expected)
+})
+
 test_that("spline penalties match constructed natural spline basis", {
   x <- seq(1, 10, length.out = 20)
   obj <- CRFparallel:::construct_spline(

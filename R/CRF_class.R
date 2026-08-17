@@ -18,7 +18,7 @@ class_model.matrix <- S7::new_class(
   "class_model.matrix",
   properties = list(
     model.matrix = class_numeric,
-    idx = class_integer
+    idx = class_vector
   ),
   constructor = function(model.matrix, idx) {
     new_object(
@@ -104,10 +104,10 @@ CRFpoly <- S7::new_class(
     restrict_degree = class_integer,
     model.matrix = class_model.matrix,
     vcov = class_numeric,
-    coefficients = class_vector,
+    coefficients = class_coefficients,
     fitted.values = new_property(class_vector, getter = function(self) {
       beta <- rep(0, (self@degree + 1)^2)
-      beta[x@model.matrix@idx] <- self@coefficients@coefficients
+      beta[self@model.matrix@idx] <- self@coefficients@coefficients
       self@model.matrix@model.matrix %*% beta
     }),
     loglik = class_double,
