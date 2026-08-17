@@ -1,8 +1,8 @@
 tensor_product <- function(X1, X2, coef.vector) {
   coef.matrix <- matrix(
     coef.vector,
-    ncol = ncol(X1),
     nrow = ncol(X1),
+    ncol = ncol(X2),
     byrow = FALSE
   )
 

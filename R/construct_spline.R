@@ -50,6 +50,7 @@ construct_spline <- function(
     knots = internal_knots,
     Boundary.knots = boundary.knots
   )
+  df <- ncol(X)
   # X <- splines::splineDesign(knots, t, degree + 1)
 
   # Create penalty matrix S = t(D1) %*% D1 if necessary ----
@@ -89,7 +90,7 @@ construct_spline <- function(
     S <- crossprod(D1)
   } else if (type == "ps") {
     ## Discrete penalty ----
-    D1 <- diff(diag(dim), differences = m2)
+    D1 <- diff(diag(df), differences = m2)
     S <- crossprod(D1)
   } else if (type == "gps") {
     M1 <- M2 <- c()

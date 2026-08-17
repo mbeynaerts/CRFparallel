@@ -9,10 +9,12 @@ spline.control(
   degree = 3L,
   dim = 10L,
   start = rep(1, dim^2),
+  lambda.init = c(1, 1),
   scale = TRUE,
   quantile = FALSE,
   observed.region = FALSE,
-  knots = NULL
+  knots = NULL,
+  knot.margin = 0.001
 )
 }
 \arguments{
@@ -24,6 +26,8 @@ spline.control(
 
 \item{start}{An optional numeric vector specifying the starting values of the spline coefficients. Default is a vector of 1s with length equal to \code{dim^2}.}
 
+\item{lambda.init}{Numeric vector with the two initial smoothing parameters. Default is \code{c(1, 1)}.}
+
 \item{scale}{Logical indicating whether to scale the penalty matrices for numerical stability. Default is \code{TRUE}.}
 
 \item{quantile}{Logical indicating whether to use quantile-based knot placement. Default is \code{FALSE}. Note that quantile-based knots are not supported for spline of type \code{"ps"}.}
@@ -31,6 +35,8 @@ spline.control(
 \item{observed.region}{Logical indicating whether knot placement should be based on the observed data only (\code{TRUE}) or on the entire data including censored observations (\code{FALSE}). Currently \code{TRUE}is not supported and defaults to \code{FALSE}.}
 
 \item{knots}{An optional list of knot locations for each dimension. If \code{NULL}, knots will be placed automatically based on the specified number of basis functions and selected penalty. Default is \code{NULL}.}
+
+\item{knot.margin}{Relative margin added to the observed time range for boundary knots. Default is \code{0.001}.}
 }
 \value{
 A named list of control parameters for spline-based estimation.

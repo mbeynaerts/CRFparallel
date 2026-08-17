@@ -82,6 +82,7 @@ estimate_spline <- function(
   S <- construct_tensor_penalty(obj1, obj2)
   S1 <- S[[1]]
   S2 <- S[[2]]
+  ncoef <- ncol(obj1$X) * ncol(obj2$X)
 
   lambda.init <- spline.control$lambda.init
   lambda.new <- lambda.init # Initial lambda = 1 in Wood (2017)
@@ -92,7 +93,7 @@ estimate_spline <- function(
   }
 
   fit <- efsud_fit(
-    start = rep(1, spline.control$dim^2),
+    start = rep(1, ncoef),
     X1 = obj1$X,
     X2 = obj2$X,
     datalist = datalist,
@@ -265,7 +266,7 @@ estimate_spline <- function(
 
   final <- CRFspline(
     model.matrix = row_kron(obj1$X, obj2$X),
-    idx = 1:(spline.control$dim^2),
+    idx = seq_len(ncoef),
     splines2_list = list(X1 = obj1$X, X2 = obj2$X),
     vcov = 2 * solve(fit$hessian + lambda.new[1] * S1 + lambda.new[2] * S2),
     lambda = lambda.new,
