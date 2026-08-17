@@ -98,7 +98,7 @@ estimate_spline <- function(
 
   if (progress) {
     cli::cli_progress_bar(
-      format = "{pb_spin} Running iteration {pb_current}/{pb_total}",
+      format = "{pb_spin} Running iteration {pb_current}",
       format_done = "{symbol$pointer} Converged in {pb_current} iterations",
       format_failed = "{symbol$cross} Failed after {pb_current} iterations",
       total = efs.control$maxiter,
