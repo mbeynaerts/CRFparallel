@@ -1,29 +1,32 @@
-keep_indices <- function(poly_degree = 3, restrict_degree = 3) {
-  dim_mat <- poly_degree + 1
+gradient_spline <- function(
+  coef.vector,
+  X1,
+  X2,
+  datalist,
+  Sl = NULL,
+  ncores = 1
+) {
+  # Note that ncores = 1 has to be present for nleqsvl to work (same inputs needed as hessian_spline)
 
-  # Create a dummy matrix to find the indices
-  # We use column-major order to match Armadillo/R defaults
-  dummy_mat <- matrix(0, nrow = dim_mat, ncol = dim_mat)
-  keep_indices <- c()
+  # Tensor product spline
+  # logtheta <- tensor_product(X1, X2, coef.vector = coef.vector)
+  # logtheta1 <- c(t(logtheta))[datalist$idxN1+1]
+  # logtheta2 <- c(logtheta)[datalist$idxN2+1]
+  #
+  # rm(logtheta)
 
-  k <- 0
-  for (j in 1:dim_mat) {
-    for (i in 1:dim_mat) {
-      # Adjust for R's 1-based indexing: (i-1) + (j-1) <= poly_order
-      if ((i - 1) + (j - 1) <= restrict_degree) {
-        # This is the linear index (0-based for C++)
-        keep_indices <- c(keep_indices, k)
-      }
-      k <- k + 1
-    }
+  gradient <- as.vector(gradient_fast(coef.vector, datalist, X1, X2)) # gradientC returns vector of derivatives of -loglik
+
+  if (!is.null(Sl)) {
+    penalty <- Sl %*% coef.vector
+  } else {
+    penalty <- 0
   }
 
-  # Output: indices of coefficients to keep in the (poly_degree+1) x (poly_degree+1) coefficient matrix
-  # These indices are C++ indices, for R use keep_indices+1
-  return(keep_indices)
+  return(gradient + penalty)
 }
 
-gradient.poly <- function(beta, X1, X2, datalist, idx) {
+gradient_poly <- function(beta, X1, X2, datalist, idx) {
   gradient <- gradient_poly_fast(beta, datalist, idx, X1, X2) # gradientC returns vector of derivatives of -loglik
 
   return(as.vector(gradient))
@@ -67,8 +70,4 @@ gradient.poly <- function(beta, X1, X2, datalist, idx) {
   #               I1 = t(datalist$I2), I2 = t(datalist$I1), I3 = datalist$I6)
   #
   #   return(-L1-L2)
-}
-
-hessian.poly <- function(beta, X1, X2, datalist, idx) {
-  hessian_poly_batched_parallel(beta, datalist, idx, X1, X2)
 }

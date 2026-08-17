@@ -1,7 +1,7 @@
 # EFS gebaseerd op de code van Simon Wood in het mgcv package (zie gam.fit4.r op github)
 # gam.control() details in mgcv.r op github
 estimate_spline <- function(
-  datalist,
+  y,
   # dim,
   # degree = 3,
   # lambda.init = c(1, 1),
@@ -10,27 +10,45 @@ estimate_spline <- function(
   # scale = TRUE,
   # observed.region = FALSE,
   # step.control = FALSE,
-  spline.control = spline.control(),
-  fs.control = efs.control(),
-  nl.control = nleqslv.control(),
-  verbose = TRUE,
+  spline.control = list(),
+  efs.control = list(),
+  nleqslv.control = list(),
+  progress = TRUE,
   ncores = 1
 ) {
+  # spline.control <- utils::modifyList(
+  #   get("spline.control", mode = "function")(),
+  #   spline.control
+  # )
+  # efs.control <- utils::modifyList(
+  #   get("efs.control", mode = "function")(),
+  #   efs.control
+  # )
+  # nleqslv.control <- utils::modifyList(
+  #   get("nleqslv.control", mode = "function")(),
+  #   nleqslv.control
+  # )
+
   RcppParallel::setThreadOptions(numThreads = ncores)
   on.exit(RcppParallel::setThreadOptions(numThreads = 1), add = TRUE)
 
-  # Initiate CRF object
-  final <- CRF.object(method = "spline", method.args = spline.control)
-  stopifnot(inherits(final, "CRFspline")) # Check that final is of class CRFspline
-
-  type <- match.arg(type)
   repara <- FALSE # Reparameterization is currently not implemented for the extended Fellner-Schall method
 
-  if (verbose) {
-    print("Generalized Fellner-Schall method:")
+  tiny <- .Machine$double.eps^0.5
+
+  if (progress) {
+    cli::cli_h1(
+      "Generalized Fellner-Schall method for spline-based estimation"
+    )
+    cli::cli_alert("Starting now, at {Sys.time()}")
+    cli::cli_progress_step("Preparing data")
   }
 
-  tiny <- .Machine$double.eps^0.5
+  datalist <- prepare_data(y, ncores = ncores)
+
+  if (progress) {
+    cli::cli_progress_step("Constructing model and penalty matrices")
+  }
 
   obj1 <- construct_spline(
     t = datalist$X[, 1],
@@ -38,11 +56,11 @@ estimate_spline <- function(
     dim = spline.control$dim,
     degree = spline.control$degree,
     type = spline.control$type,
+    quantile = spline.control$quantile,
     scale = spline.control$scale,
     repara = repara,
     observed.region = spline.control$observed.region,
-    quantile = spline.control$quantile,
-    knot.margin = control$knot.margin
+    knot.margin = spline.control$knot.margin
   )
   obj2 <- construct_spline(
     t = datalist$X[, 2],
@@ -50,38 +68,53 @@ estimate_spline <- function(
     dim = spline.control$dim,
     degree = spline.control$degree,
     type = spline.control$type,
+    quantile = spline.control$quantile,
     scale = spline.control$scale,
     repara = repara,
     observed.region = spline.control$observed.region,
-    quantile = spline.control$quantile,
-    knot.margin = control$knot.margin
+    knot.margin = spline.control$knot.margin
   )
 
   # Save model matrix
-  final$model.matrix <- row_kron(obj1$X, obj2$X)
-  attr(final$method, "knots") <- list(knots1 = obj1$knots, knots2 = obj2$knots)
+  # final$model.matrix <- row_kron(obj1$X, obj2$X)
+  # attr(final$method, "knots") <- list(knots1 = obj1$knots, knots2 = obj2$knots)
 
   S <- construct_tensor_penalty(obj1, obj2)
   S1 <- S[[1]]
   S2 <- S[[2]]
 
   lambda.init <- spline.control$lambda.init
-  lambda.new <- lambda.init # In voorbeelden van Wood (2017) is de initiele lambda = 1
+  lambda.new <- lambda.init # Initial lambda = 1 in Wood (2017)
 
   # deriv.comp <- deriv_comp(X1 = X1, X2 = X2, datalist = datalist)
+  if (progress) {
+    cli::cli_progress_step("Fitting model on initial values", spinner = TRUE)
+  }
 
   fit <- efsud_fit(
-    start = start,
+    start = rep(1, spline.control$dim^2),
     X1 = obj1$X,
     X2 = obj2$X,
     datalist = datalist,
     Sl = lambda.init[1] * S1 + lambda.init[2] * S2,
-    control = nl.control,
+    control = nleqslv.control,
     ncores = ncores
   )
   k <- 1
-  score <- rep(0, control$maxiter)
-  for (iter in 1:fs.control$maxiter) {
+  score <- rep(0, efs.control$maxiter)
+  if (progress) {
+    cli::cli_progress_step(
+      msg = msg,
+      msg_done = "Converged in {iter} iterations",
+      msg_failed = "Failed after {iter} iterations",
+      spinner = TRUE
+    )
+  }
+  for (iter in 1:efs.control$maxiter) {
+    if (progress) {
+      msg <- glue::glue("Running iteration {iter}")
+      cli::cli_progress_update()
+    }
     l0 <- fit$REML
 
     lambda <- lambda.new
@@ -108,7 +141,7 @@ estimate_spline <- function(
     update <- a / pmax(tiny, bSb)
     update[a == 0 & bSb == 0] <- 1
     update[!is.finite(update)] <- 1e6
-    lambda.new <- pmin(update * lambda, control$lambda.max)
+    lambda.new <- pmin(update * lambda, efs.control$lambda.max)
 
     # Step length of update
     max.step <- max(abs(lambda.new - lambda))
@@ -123,13 +156,13 @@ estimate_spline <- function(
       X2 = obj2$X,
       datalist = datalist,
       Sl = Sl.new,
-      control = nl.control,
+      control = nleqslv.control,
       ncores = ncores
     )
     l1 <- fit$REML
 
     # Start of step control ----
-    if (spline.control$step.control) {
+    if (efs.control$step.control) {
       if (l1 > l0) {
         # Improvement
         if (max.step < 1) {
@@ -143,7 +176,7 @@ estimate_spline <- function(
             # Sl = lambda2*S
             Sl = lambda2[1] * S1 + lambda2[2] * S2,
             # weights = weights,
-            control = nl.control,
+            control = nleqslv.control,
             ncores = ncores
           )
           l2 <- fit2$REML
@@ -162,7 +195,7 @@ estimate_spline <- function(
         while (lk < l0 && k > 1) {
           # Don't contract too much since the likelihood does not need to increase k > 0.001
           k <- k / 2 ## Contract step
-          lambda3 <- pmin(lambda * update^k, control$lambda.max)
+          lambda3 <- pmin(lambda * update^k, efs.control$lambda.max)
           fit <- efsud_fit(
             start = fit$beta,
             X1 = obj1$X,
@@ -171,7 +204,7 @@ estimate_spline <- function(
             # Sl = lambda3*S
             Sl = lambda3[1] * S1 + lambda3[2] * S2,
             # weights = weights,
-            control = nl.control,
+            control = nleqslv.control,
             ncores = ncores
           )
           lk <- fit$REML
@@ -186,69 +219,66 @@ estimate_spline <- function(
     # save loglikelihood value
     score[iter] <- l1
 
-    # Print information while running...
-    if (verbose) {
-      print(paste0(
-        "Iteration ",
-        iter,
-        ": k = ",
-        k,
-        # " lambda = ", round(lambda.new,4),
-        " lambda1 = ",
-        round(lambda.new[1], 4),
-        " lambda2 = ",
-        round(lambda.new[2], 4),
-        " ll = ",
-        round(fit$ll, 4),
-        " REML = ",
-        score[iter]
-      ))
-    }
-
     # Break procedures ----
 
     # Break procedure if REML change and step size are too small
     if (
       iter > 3 &&
-        max(abs(diff(score[(iter - 3):iter]))) < fs.control$REML.tol &&
-        max.step < fs.control$lambda.tol
+        max(abs(diff(score[(iter - 3):iter]))) < efs.control$REML.tol &&
+        max.step < efs.control$lambda.tol
     ) {
-      if (verbose) {
-        print("REML not changing")
+      if (progress) {
+        cli::cli_alert_info("REML not changing")
       }
       break
     }
     # Or break is likelihood does not change
-    # if (l1 == l0) {if (verbose) print("Loglik not changing"); break}
+    # if (l1 == l0) {if (progress) print("Loglik not changing"); break}
 
     # Stop if loglik is not changing
     if (iter == 1) {
       old.ll <- fit$ll
     } else {
-      if (abs(old.ll - fit$ll) < fs.control$ll.tol) {
-        if (verbose) {
-          print("Loglik not changing")
+      if (abs(old.ll - fit$ll) < efs.control$ll.tol) {
+        if (progress) {
+          cli::cli_alert_info("Log-likelihood not changing")
         }
         break
       } # if (abs(old.ll-fit$ll)<100*eps*abs(fit$ll))
       old.ll <- fit$ll
     }
+
+    cli::cli_progress_update() # To make sure that the spinner in cli_progress_step works
   } # End of for loop
 
-  if (verbose) {
-    if (iter < fs.control$maxiter) {
-      print("Converged")
-    } else {
-      print("Maximum number of iterations reached")
-    }
+  # final$coefficients <- fit$beta
+  # final$fitted.values <- as.vector(final$model.matrix %*% fit$beta)
+  # final$vcov <- 2 * solve(fit$hessian + lambda.new[1] * S1 + lambda.new[2] * S2)
+  # attr(final$method, "lambda") <- lambda.new
+  # attr(final$method, "iterations") <- iter
+  # final$loglik <- fit$ll
+  # final$reml <- fit$REML
+
+  if (progress) {
+    cli::cli_progress_step("Creating output")
   }
-  final$coefficients <- fit$beta
-  final$fitted.values <- as.vector(final$model.matrix %*% fit$beta)
-  final$vcov <- 2 * solve(fit$hessian + lambda.new[1] * S1 + lambda.new[2] * S2)
-  attr(final$method, "lambda") <- lambda.new
-  attr(final$method, "iterations") <- iter
-  final$loglik = fit$ll
-  final$reml = fit$REML
+
+  final <- CRFspline(
+    model.matrix = row_kron(obj1$X, obj2$X),
+    idx = 1:(spline.control$dim^2),
+    splines2_list = list(X1 = obj1$X, X2 = obj2$X),
+    vcov = 2 * solve(fit$hessian + lambda.new[1] * S1 + lambda.new[2] * S2),
+    lambda = lambda.new,
+    coefficients = fit$beta,
+    loglik = fit$ll,
+    reml = fit$REML,
+    iterations = iter,
+    call = match.call()
+  )
+
+  if (progress) {
+    cli::cli_alert("Finished at {Sys.time()}")
+  }
 
   return(final)
 

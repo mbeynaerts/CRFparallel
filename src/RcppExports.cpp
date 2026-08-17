@@ -11,19 +11,38 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// estimate_bernstein
-double estimate_bernstein(const double& s1, const double& s2, const int& m, const double& tau1, const double& tau2, const arma::mat& Chat);
-RcppExport SEXP _CRFparallel_estimate_bernstein(SEXP s1SEXP, SEXP s2SEXP, SEXP mSEXP, SEXP tau1SEXP, SEXP tau2SEXP, SEXP ChatSEXP) {
+// estimate_copula
+arma::mat estimate_copula(arma::vec& t1, arma::vec& t2, double max_c, Rcpp::List& km1, Rcpp::List& km2, Rcpp::List& kmc, int m, double tau1, double tau2);
+RcppExport SEXP _CRFparallel_estimate_copula(SEXP t1SEXP, SEXP t2SEXP, SEXP max_cSEXP, SEXP km1SEXP, SEXP km2SEXP, SEXP kmcSEXP, SEXP mSEXP, SEXP tau1SEXP, SEXP tau2SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const double& >::type s1(s1SEXP);
-    Rcpp::traits::input_parameter< const double& >::type s2(s2SEXP);
-    Rcpp::traits::input_parameter< const int& >::type m(mSEXP);
-    Rcpp::traits::input_parameter< const double& >::type tau1(tau1SEXP);
-    Rcpp::traits::input_parameter< const double& >::type tau2(tau2SEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type Chat(ChatSEXP);
-    rcpp_result_gen = Rcpp::wrap(estimate_bernstein(s1, s2, m, tau1, tau2, Chat));
+    Rcpp::traits::input_parameter< arma::vec& >::type t1(t1SEXP);
+    Rcpp::traits::input_parameter< arma::vec& >::type t2(t2SEXP);
+    Rcpp::traits::input_parameter< double >::type max_c(max_cSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List& >::type km1(km1SEXP);
+    Rcpp::traits::input_parameter< Rcpp::List& >::type km2(km2SEXP);
+    Rcpp::traits::input_parameter< Rcpp::List& >::type kmc(kmcSEXP);
+    Rcpp::traits::input_parameter< int >::type m(mSEXP);
+    Rcpp::traits::input_parameter< double >::type tau1(tau1SEXP);
+    Rcpp::traits::input_parameter< double >::type tau2(tau2SEXP);
+    rcpp_result_gen = Rcpp::wrap(estimate_copula(t1, t2, max_c, km1, km2, kmc, m, tau1, tau2));
+    return rcpp_result_gen;
+END_RCPP
+}
+// bernstein_estimator_vec
+arma::vec bernstein_estimator_vec(const arma::vec& s1, const arma::vec& s2, int m, double tau1, double tau2, const arma::mat& copula);
+RcppExport SEXP _CRFparallel_bernstein_estimator_vec(SEXP s1SEXP, SEXP s2SEXP, SEXP mSEXP, SEXP tau1SEXP, SEXP tau2SEXP, SEXP copulaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec& >::type s1(s1SEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type s2(s2SEXP);
+    Rcpp::traits::input_parameter< int >::type m(mSEXP);
+    Rcpp::traits::input_parameter< double >::type tau1(tau1SEXP);
+    Rcpp::traits::input_parameter< double >::type tau2(tau2SEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type copula(copulaSEXP);
+    rcpp_result_gen = Rcpp::wrap(bernstein_estimator_vec(s1, s2, m, tau1, tau2, copula));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -252,7 +271,8 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_CRFparallel_estimate_bernstein", (DL_FUNC) &_CRFparallel_estimate_bernstein, 6},
+    {"_CRFparallel_estimate_copula", (DL_FUNC) &_CRFparallel_estimate_copula, 9},
+    {"_CRFparallel_bernstein_estimator_vec", (DL_FUNC) &_CRFparallel_bernstein_estimator_vec, 6},
     {"_CRFparallel_row_kron", (DL_FUNC) &_CRFparallel_row_kron, 2},
     {"_CRFparallel_band_chol_cpp", (DL_FUNC) &_CRFparallel_band_chol_cpp, 1},
     {"_CRFparallel_sdiag_cpp", (DL_FUNC) &_CRFparallel_sdiag_cpp, 2},

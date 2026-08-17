@@ -1,57 +1,101 @@
 estimate_poly <- function(
-  datalist,
+  y,
   start = rep(0, 10),
   degree = 3,
   restrict_degree = 3,
-  poly.control = polynomial.control(),
-  nl.control = nleqslv.control(),
+  nleqslv.control = list(),
+  poly.control = list(),
+  progress = TRUE,
   ncores = 1
 ) {
+  # nleqslv.control <- utils::modifyList(
+  #   get("nleqslv.control", mode = "function")(),
+  #   nleqslv.control
+  # )
+  # poly.control <- utils::modifyList(
+  #   get("polynomial.control", mode = "function")(),
+  #   poly.control
+  # )
+
   RcppParallel::setThreadOptions(numThreads = ncores)
   on.exit(RcppParallel::setThreadOptions(numThreads = 1), add = TRUE)
+
+  if (progress) {
+    cli::cli_h1(
+      "Maximum likelihood for polynomial-based estimation"
+    )
+    cli::cli_alert("Starting now, at {Sys.time()}")
+    cli::cli_progress_step("Preparing data")
+  }
+
+  datalist <- prepare_data(y, ncores = ncores)
 
   # X1 <- cbind(1, datalist$X[, 1], datalist$X[, 1]^2, datalist$X[, 1]^3)
   # X2 <- cbind(1, datalist$X[, 2], datalist$X[, 2]^2, datalist$X[, 2]^3)
 
-  final <- CRF.object(method = "polynomial", method.args = poly.control)
-  stopifnot(inherits(final, "CRFpoly")) # Check that final is of class CRFpoly
+  if (progress) {
+    cli::cli_progress_step("Constructing model matrix")
+  }
 
   X1 <- model.matrix(
-    ~ poly(datalist$X[, 1], degree = d, raw = TRUE, simple = TRUE)
+    ~ poly(datalist$X[, 1], degree = degree, raw = TRUE, simple = TRUE)
   )
   X2 <- model.matrix(
-    ~ poly(datalist$X[, 2], degree = d, raw = TRUE, simple = TRUE)
+    ~ poly(datalist$X[, 2], degree = degree, raw = TRUE, simple = TRUE)
   )
+
+  model.matrix <- row_kron(X1, X2)
 
   idx <- keep_indices(
-    poly_degree = poly_degree,
+    poly_degree = degree,
     restrict_degree = restrict_degree
   )
-  final$model.matrix <- row_kron(X1, X2)
-  attr(final$model.matrix, "idx") <- idx + 1
+
+  if (progress) {
+    cli::cli_progress_step("Estimating model parameters")
+  }
 
   beta <- nleqslv::nleqslv(
+    #FIXME Add ... output from nleqslv.control to input of nleqslv
     x = start,
-    fn = gradient.poly,
-    jac = hessian.poly,
-    method = nl.control$method,
-    global = nl.control$global,
+    fn = gradient_poly,
+    jac = hessian_poly,
+    method = nleqslv.control$method,
+    global = nleqslv.control$global,
     idx = idx,
     datalist = datalist,
     X1 = X1,
     X2 = X2
   )
 
-  V <- hessian.poly(beta$x, X1 = X1, X2 = X2, datalist = datalist, idx = idx)
+  if (progress) {
+    cli::cli_progress_step("Calculating variance-covariance matrix")
+  }
 
-  coef.matrix <- matrix(0.0, nrow = degree + 1, ncol = degree + 1)
-  coef.matrix[idx + 1] <- beta$x
+  V <- hessian_poly(beta$x, X1 = X1, X2 = X2, datalist = datalist, idx = idx)
 
-  final$fitted.values <- X1 %*% coef.matrix %*% t(X2)
-  final$coefficients <- beta$x
-  final$vcov <- solve(V)
-  final$loglik <- beta$fvec
+  # final$fitted.values <- X1 %*% coef.matrix %*% t(X2)
+  # final$coefficients <- beta$x
+  # final$vcov <- solve(V)
+  # final$loglik <- beta$fvec
 
-  # return(list(beta = beta$x, vcov = solve(V), degree = degree, idx = idx + 1))
+  if (progress) {
+    cli::cli_progress_step("Creating output")
+  }
+
+  final <- CRFpoly(
+    poly.control,
+    model.matrix = model.matrix,
+    idx = idx + 1, # Convert C++ idx to R idx
+    vcov = solve(V),
+    coefficients = beta$x,
+    loglik = beta$fvec,
+    call = match.call
+  )
+
+  if (progress) {
+    cli::cli_alert("Finished at {Sys.time()}")
+  }
+
   return(final)
 }

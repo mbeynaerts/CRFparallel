@@ -44,8 +44,8 @@ SimData <- function(
   # T2 <- get(margin_dist)(p = U[,2], lower.tail = FALSE, ...)
 
   if (cens.par > 0) {
-    C1 <- rexp(K, cens.par)
-    C2 <- rexp(K, cens.par)
+    C1 <- stats::rexp(K, cens.par)
+    C2 <- stats::rexp(K, cens.par)
 
     X1 <- pmin(T1, C1)
     X2 <- pmin(T2, C2)
@@ -157,7 +157,7 @@ SimData <- function(
   # A1 <- c(I1*outer(delta[,2], delta[,1]))[N1 > 0]
   # A2 <- c(I3*outer(delta[,1], delta[,2]))[N2 > 0]
 
-  delta.prod = delta(delta[, 1], delta[, 2])
+  delta.prod <- delta(delta[, 1], delta[, 2])
   delta.prod1 <- c(t(delta.prod))
   delta.prod2 <- c(delta.prod)
   rm(delta.prod)
@@ -179,4 +179,69 @@ SimData <- function(
     delta1 = delta.prod1[idxN1],
     delta2 = delta.prod2[idxN2]
   ))
+}
+
+logtheta_arb <- function(x, y) {
+  0.9 *
+    sin(5 * x) *
+    cos(4 * y) +
+    0.7 * exp(-25 * ((x - 1.35)^2 + (y - 0.55)^2)) -
+    0.6 * exp(-18 * ((x - 0.55)^2 + (y - 1.35)^2))
+}
+
+theta_arb <- function(x, y) exp(logtheta_arb(x, y))
+
+simulate_pairs_arb <- function(n, x, y, L) {
+  out <- matrix(NA_real_, n, 2)
+  for (r in seq_len(n)) {
+    u1 <- rexp(1)
+    i <- pmax(2, pmin(length(x), findInterval(u1, x) + 1))
+    wx <- (u1 - x[i - 1]) / (x[i] - x[i - 1])
+    lrow <- (1 - wx) * L[i - 1, ] + wx * L[i, ]
+    lx <- (L[i, ] - L[i - 1, ]) / (x[i] - x[i - 1])
+    cond_surv <- lx * exp(-lrow + u1)
+    cond_surv <- cummin(pmin(1, pmax(0, cond_surv)))
+    u2 <- runif(1)
+    inv <- data.frame(s = rev(cond_surv), y = rev(y))
+    inv <- inv[!duplicated(inv$s), ]
+    out[r, ] <- c(u1, approx(inv$s, inv$y, xout = u2, rule = 2)$y)
+  }
+  out
+}
+
+solve_lambda <- function(x, y) {
+  nx <- length(x)
+  ny <- length(y)
+  L <- matrix(0, nx, ny)
+  L[, 1] <- x
+  L[1, ] <- y
+
+  for (i in 2:nx) {
+    for (j in 2:ny) {
+      A <- L[i - 1, j]
+      B <- L[i, j - 1]
+      C <- L[i - 1, j - 1]
+      k <- 1 - theta_arb((x[i] + x[i - 1]) / 2, (y[j] + y[j - 1]) / 2)
+      u <- A + B - C
+
+      for (step in 1:20) {
+        f <- u - A - B + C - k * (u - A) * (u - B)
+        fp <- 1 - k * (2 * u - A - B)
+        u <- u - f / fp
+      }
+      L[i, j] <- u
+    }
+  }
+  L
+}
+
+sim_arbitrary <- function(n = 500) {
+  nx <- 161
+  ny <- 161
+  x <- seq(0, 2.0, length.out = nx)
+  y <- seq(0, 2.0, length.out = ny)
+
+  L <- solve_lambda(x, y)
+
+  dat <- simulate_pairs_arb(n, x, y, L)
 }

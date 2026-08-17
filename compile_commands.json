@@ -1,106 +1,27 @@
 [
-  {
-    "file": "RcppExports.cpp",
-    "arguments": [
-      "/usr/bin/clang++",
-      "-arch",
-      "arm64",
-      "-std=gnu++17",
-      "-I/Library/Frameworks/R.framework/Resources/include",
-      "-DNDEBUG",
-      "-I/Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/library/Rcpp/include",
-      "-I/Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/library/RcppArmadillo/include",
-      "-I/Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/library/RcppParallel/include",
-      "-I/opt/R/arm64/include",
-      "-fPIC",
-      "-falign-functions=64",
-      "-Wall",
-      "-g",
-      "-O2",
-      "-c",
-      "RcppExports.cpp",
-      "-o",
-      "RcppExports.o"
-    ],
-    "directory": "/Users/miguel/Documents/R packages/CRFparallel/src",
-    "output": "RcppExports.o"
-  },
-  {
-    "file": "bernstein.cpp",
-    "arguments": [
-      "/usr/bin/clang++",
-      "-arch",
-      "arm64",
-      "-std=gnu++17",
-      "-I/Library/Frameworks/R.framework/Resources/include",
-      "-DNDEBUG",
-      "-I/Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/library/Rcpp/include",
-      "-I/Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/library/RcppArmadillo/include",
-      "-I/Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/library/RcppParallel/include",
-      "-I/opt/R/arm64/include",
-      "-fPIC",
-      "-falign-functions=64",
-      "-Wall",
-      "-g",
-      "-O2",
-      "-c",
-      "bernstein.cpp",
-      "-o",
-      "bernstein.o"
-    ],
-    "directory": "/Users/miguel/Documents/R packages/CRFparallel/src",
-    "output": "bernstein.o"
-  },
-  {
-    "file": "helpers.cpp",
-    "arguments": [
-      "/usr/bin/clang++",
-      "-arch",
-      "arm64",
-      "-std=gnu++17",
-      "-I/Library/Frameworks/R.framework/Resources/include",
-      "-DNDEBUG",
-      "-I/Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/library/Rcpp/include",
-      "-I/Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/library/RcppArmadillo/include",
-      "-I/Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/library/RcppParallel/include",
-      "-I/opt/R/arm64/include",
-      "-fPIC",
-      "-falign-functions=64",
-      "-Wall",
-      "-g",
-      "-O2",
-      "-c",
-      "helpers.cpp",
-      "-o",
-      "helpers.o"
-    ],
-    "directory": "/Users/miguel/Documents/R packages/CRFparallel/src",
-    "output": "helpers.o"
-  },
-  {
-    "file": "main.cpp",
-    "arguments": [
-      "/usr/bin/clang++",
-      "-arch",
-      "arm64",
-      "-std=gnu++17",
-      "-I/Library/Frameworks/R.framework/Resources/include",
-      "-DNDEBUG",
-      "-I/Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/library/Rcpp/include",
-      "-I/Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/library/RcppArmadillo/include",
-      "-I/Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/library/RcppParallel/include",
-      "-I/opt/R/arm64/include",
-      "-fPIC",
-      "-falign-functions=64",
-      "-Wall",
-      "-g",
-      "-O2",
-      "-c",
-      "main.cpp",
-      "-o",
-      "main.o"
-    ],
-    "directory": "/Users/miguel/Documents/R packages/CRFparallel/src",
-    "output": "main.o"
-  }
+    {
+        "command": "clang++ -arch arm64 -std=gnu++20 -I\"/Library/Frameworks/R.framework/Resources/include\" -DNDEBUG  -I\"/Library/Frameworks/R.framework/Versions/4.6/Resources/library/Rcpp/include\" -I\"/Library/Frameworks/R.framework/Versions/4.6/Resources/library/RcppArmadillo/include\" -I\"/Library/Frameworks/R.framework/Versions/4.6/Resources/library/RcppParallel/include\" -I/opt/R/arm64/include    -DRCPP_PARALLEL_USE_TBB=1 -DTBB_INTERFACE_NEW -I/Library/Frameworks/R.framework/Versions/4.6/Resources/library/RcppParallel/include -fPIC  -falign-functions=64 -Wall -g -O2   -c bernstein.cpp -o bernstein.o",
+        "file": "bernstein.cpp",
+        "directory": "/Users/miguel/Documents/R packages/CRFparallel/src"
+    },
+    {
+        "command": "clang++ -arch arm64 -std=gnu++20 -I\"/Library/Frameworks/R.framework/Resources/include\" -DNDEBUG  -I\"/Library/Frameworks/R.framework/Versions/4.6/Resources/library/Rcpp/include\" -I\"/Library/Frameworks/R.framework/Versions/4.6/Resources/library/RcppArmadillo/include\" -I\"/Library/Frameworks/R.framework/Versions/4.6/Resources/library/RcppParallel/include\" -I/opt/R/arm64/include    -DRCPP_PARALLEL_USE_TBB=1 -DTBB_INTERFACE_NEW -I/Library/Frameworks/R.framework/Versions/4.6/Resources/library/RcppParallel/include -fPIC  -falign-functions=64 -Wall -g -O2   -c helpers.cpp -o helpers.o",
+        "file": "helpers.cpp",
+        "directory": "/Users/miguel/Documents/R packages/CRFparallel/src"
+    },
+    {
+        "command": "clang++ -arch arm64 -std=gnu++20 -I\"/Library/Frameworks/R.framework/Resources/include\" -DNDEBUG  -I\"/Library/Frameworks/R.framework/Versions/4.6/Resources/library/Rcpp/include\" -I\"/Library/Frameworks/R.framework/Versions/4.6/Resources/library/RcppArmadillo/include\" -I\"/Library/Frameworks/R.framework/Versions/4.6/Resources/library/RcppParallel/include\" -I/opt/R/arm64/include    -DRCPP_PARALLEL_USE_TBB=1 -DTBB_INTERFACE_NEW -I/Library/Frameworks/R.framework/Versions/4.6/Resources/library/RcppParallel/include -fPIC  -falign-functions=64 -Wall -g -O2   -c main.cpp -o main.o",
+        "file": "main.cpp",
+        "directory": "/Users/miguel/Documents/R packages/CRFparallel/src"
+    },
+    {
+        "command": "clang++ -arch arm64 -std=gnu++20 -I\"/Library/Frameworks/R.framework/Resources/include\" -DNDEBUG  -I\"/Library/Frameworks/R.framework/Versions/4.6/Resources/library/Rcpp/include\" -I\"/Library/Frameworks/R.framework/Versions/4.6/Resources/library/RcppArmadillo/include\" -I\"/Library/Frameworks/R.framework/Versions/4.6/Resources/library/RcppParallel/include\" -I/opt/R/arm64/include    -DRCPP_PARALLEL_USE_TBB=1 -DTBB_INTERFACE_NEW -I/Library/Frameworks/R.framework/Versions/4.6/Resources/library/RcppParallel/include -fPIC  -falign-functions=64 -Wall -g -O2   -c prepare_data.cpp -o prepare_data.o",
+        "file": "prepare_data.cpp",
+        "directory": "/Users/miguel/Documents/R packages/CRFparallel/src"
+    },
+    {
+        "command": "clang++ -arch arm64 -std=gnu++20 -I\"/Library/Frameworks/R.framework/Resources/include\" -DNDEBUG  -I\"/Library/Frameworks/R.framework/Versions/4.6/Resources/library/Rcpp/include\" -I\"/Library/Frameworks/R.framework/Versions/4.6/Resources/library/RcppArmadillo/include\" -I\"/Library/Frameworks/R.framework/Versions/4.6/Resources/library/RcppParallel/include\" -I/opt/R/arm64/include    -DRCPP_PARALLEL_USE_TBB=1 -DTBB_INTERFACE_NEW -I/Library/Frameworks/R.framework/Versions/4.6/Resources/library/RcppParallel/include -fPIC  -falign-functions=64 -Wall -g -O2   -c RcppExports.cpp -o RcppExports.o",
+        "file": "RcppExports.cpp",
+        "directory": "/Users/miguel/Documents/R packages/CRFparallel/src"
+    }
 ]

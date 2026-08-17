@@ -2,3 +2,5 @@
 .Rhistory
 .RData
 .Ruserdata
+compile_commands.json
+.cache

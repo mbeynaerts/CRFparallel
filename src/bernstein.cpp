@@ -6,8 +6,7 @@ using namespace Rcpp;
 // [[Rcpp::depends(RcppArmadillo)]]
 // [[Rcpp::depends(RcppParallel)]]
 
-
-// TODO - Add more comments to the code, especially in the copulaWorker class
+// TODO Add more comments to the code, especially in the copulaWorker class
 struct copulaWorker : public RcppParallel::Worker {
   
   // Input
@@ -132,7 +131,6 @@ struct BernsteinWorker : public RcppParallel::Worker {
         p2_acc(k) = b2 * (k - m * w2) * inv_w2;
       }
 
-
       // Use matrix products instead of the original sums in Ömer's R code
       // sum1 = p1.t() * copula * p2
       // sum2 = p1_acc.t() * copula * p2
@@ -166,10 +164,10 @@ double log_dbinom(int k, int n, double p) {
 }
 
 
-/**
+/*
  * estimate_copula
  * The main R-accessible function to compute the copula matrix.
- * * @param data    Matrix containing t1, t2, and status vectors (biSurv object)
+ * @param data    Matrix containing t1, t2, and status vectors (biSurv object)
  * @param km1s    KM-estimator S(t1) as a list with time and surv vectors(survfit object)
  * @param km2s    KM-estimator S(t2) as a list with time and surv vectors(survfit object)
  * @param kmc     KM-estimator S(status) as a list with time and surv vectors(survfit object)
@@ -179,14 +177,14 @@ double log_dbinom(int k, int n, double p) {
  */
 // [[Rcpp::export]]
 arma::mat estimate_copula(arma::vec &t1,
-                                  arma::vec &t2,
-                                  double max_c,
-                                  Rcpp::List &km1, // KM-estimator S(t1)
-                                  Rcpp::List &km2, // KM-estimator S(t2)
-                                  Rcpp::List &kmc, // KM-estimator S(status)
-                                  int m, // Bernstein order
-                                  double tau1, // min(S(t1))
-                                  double tau2) { // min(S(t1))
+                          arma::vec &t2,
+                          double max_c,
+                          Rcpp::List &km1, // KM-estimator S(t1)
+                          Rcpp::List &km2, // KM-estimator S(t2)
+                          Rcpp::List &kmc, // KM-estimator S(status)
+                          int m, // Bernstein order
+                          double tau1, // min(S(t1))
+                          double tau2) { // min(S(t2))
   
 
   arma::vec k1t = km1["time"], k1s = km1["surv"];

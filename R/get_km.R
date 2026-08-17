@@ -1,7 +1,4 @@
 get_km <- function(object) {
-  stopifnot(inherits(object, "biSurv"))
-  stopifnot(isTRUE(attr(object, "bernstein")))
-
   t1 <- object[, "time1"]
   t2 <- object[, "time2"]
   c <- object[, "c"]

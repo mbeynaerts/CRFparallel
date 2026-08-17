@@ -10,14 +10,15 @@ efsud_fit <- function(
   # if (is.null(deriv.comp)) deriv <- deriv_comp(X1 = X1, X2 = X2, datalist = datalist, weights = weights)
   # else deriv <- deriv.comp
 
-  # beta <- multiroot(gradient.spline, start = start, jacfunc = hessian.spline, jactype = "fullusr", rtol = 1e-10, X1 = X1, X2 = X2, Sl = Sl, datalist = datalist, deriv = deriv)$root
+  # beta <- multiroot(gradient_spline, start = start, jacfunc = hessian_spline, jactype = "fullusr", rtol = 1e-10, X1 = X1, X2 = X2, Sl = Sl, datalist = datalist, deriv = deriv)$root
 
   estim <- nleqslv::nleqslv(
     x = start,
-    fn = gradient.spline,
-    jac = hessian.spline,
+    fn = gradient_spline,
+    jac = hessian_spline,
     method = control$method,
     global = control$global,
+    control = control[setdiff(names(control), c("method", "global"))],
     X1 = X1,
     X2 = X2,
     datalist = datalist,
@@ -30,7 +31,7 @@ efsud_fit <- function(
     stop("One of the spline coefficients is NA")
   }
 
-  H <- hessian.spline(
+  H <- hessian_spline(
     coef.vector = beta,
     X1 = X1,
     X2 = X2,
@@ -38,7 +39,7 @@ efsud_fit <- function(
     ncores = ncores
   )
 
-  fit <- reml.spline(
+  fit <- reml_spline(
     coef.vector = beta,
     X1 = X1,
     X2 = X2,
