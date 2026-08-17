@@ -2,14 +2,6 @@
 # gam.control() details in mgcv.r op github
 estimate_spline <- function(
   y,
-  # dim,
-  # degree = 3,
-  # lambda.init = c(1, 1),
-  # start = rep(1, dim^2),
-  # quantile = FALSE,
-  # scale = TRUE,
-  # observed.region = FALSE,
-  # step.control = FALSE,
   spline.control = list(),
   efs.control = list(),
   nleqslv.control = list(),
@@ -103,18 +95,17 @@ estimate_spline <- function(
   )
   k <- 1
   score <- rep(0, efs.control$maxiter)
+
   if (progress) {
-    cli::cli_progress_step(
-      msg = "Running iteration {iter}",
-      msg_done = "Converged in {iter} iterations",
-      msg_failed = "Failed after {iter} iterations",
-      spinner = TRUE
+    cli::cli_progress_bar(
+      format = "{pb_spin} Running iteration {pb_current}/{pb_total}",
+      format_done = "{symbol$pointer} Converged in {pb_current} iterations",
+      format_failed = "{symbol$cross} Failed after {pb_current} iterations",
+      total = efs.control$maxiter,
+      clear = FALSE
     )
   }
   for (iter in 1:efs.control$maxiter) {
-    if (progress) {
-      cli::cli_progress_update()
-    }
     l0 <- fit$REML
 
     lambda <- lambda.new
@@ -219,6 +210,10 @@ estimate_spline <- function(
     # save loglikelihood value
     score[iter] <- l1
 
+    if (progress) {
+      cli::cli_progress_update()
+    }
+
     # Break procedures ----
 
     # Break procedure if REML change and step size are too small
@@ -228,6 +223,7 @@ estimate_spline <- function(
         max.step < efs.control$lambda.tol
     ) {
       if (progress) {
+        cli::cli_progress_done(result = "done")
         cli::cli_alert_info("REML not changing")
       }
       break
@@ -241,6 +237,7 @@ estimate_spline <- function(
     } else {
       if (abs(old.ll - fit$ll) < efs.control$ll.tol) {
         if (progress) {
+          cli::cli_progress_done(result = "done")
           cli::cli_alert_info("Log-likelihood not changing")
         }
         break
