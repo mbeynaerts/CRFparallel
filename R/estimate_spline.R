@@ -104,6 +104,7 @@ estimate_spline <- function(
   k <- 1
   score <- rep(0, efs.control$maxiter)
   if (progress) {
+    msg <- ""
     cli::cli_progress_step(
       msg = msg,
       msg_done = "Converged in {iter} iterations",
