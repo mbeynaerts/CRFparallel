@@ -104,9 +104,8 @@ estimate_spline <- function(
   k <- 1
   score <- rep(0, efs.control$maxiter)
   if (progress) {
-    msg <- ""
     cli::cli_progress_step(
-      msg = msg,
+      msg = "Running iteration {iter}",
       msg_done = "Converged in {iter} iterations",
       msg_failed = "Failed after {iter} iterations",
       spinner = TRUE
@@ -114,7 +113,6 @@ estimate_spline <- function(
   }
   for (iter in 1:efs.control$maxiter) {
     if (progress) {
-      msg <- glue::glue("Running iteration {iter}")
       cli::cli_progress_update()
     }
     l0 <- fit$REML
